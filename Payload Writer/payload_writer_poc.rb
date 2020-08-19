@@ -58,7 +58,6 @@ end
 class Vm < MtvBaseObject
   attr_writer   :id
   attr_writer   :name
-  attr_writer   :ems_ref
   attr_writer   :firmware
   attr_writer   :cpu_cores_per_socket
   attr_writer   :cpu_total_cores
@@ -82,46 +81,29 @@ class Vm < MtvBaseObject
   attr_accessor :operating_system
   attr_accessor :hardware
   
-  def initialize(vm)
-    @id                              = vm[:uuid]
-    @name                            = vm[:name]
-    @ems_ref                         = vm[:id]
-    @operating_system                = {}
-    @operating_system[:product_name] = vm[:guestName]
-    if /Linux/ =~ vm[:guestName]
-      @operating_system[:product_type] = "Linux"
-    elsif /Microsoft Windows Server/ =~ vm[:guestName]
-      @operating_system[:product_type] = "ServerNT"
-    else
-      @operating_system[:product_type] = "Unknown"
-    end
-    @hardware                        = {}
-    @hardware[:guest_os_full_name]   = vm[:guestName]
-    @hardware[:disks]                = []
-    @retired                         = nil
-    @cpu_total_cores                 = vm[:cpuCount]
-    @cpu_affinity                    = vm[:cpuAffinity]
-    @numa_node_affinity              = nil
-    @ram_size_in_bytes               = vm[:memorySizeMB] * 1048576
-    @ballooned_memory                = vm[:balloonedMemory]
-    @firmware                        = vm[:firmware]
-    @has_rdm_disk                    = false
-    @has_encrypted_disk              = false
-    @has_passthrough_device          = false
-    @has_opaque_network              = false
-    @has_vm_ha_config                = false
-    @has_vm_drs_config               = false
-    @has_vm_affinity_config          = false
-    @memory_hot_add_enabled          = vm[:memoryHotAddEnabled]
-    @cpu_hot_add_enabled             = vm[:cpuHostAddEnabled]
-    @cpu_hot_remove_enabled          = vm[:cpuHostRemoveEnabled]
+  def initialize
+    @operating_system       = {}
+    @hardware               = {}
+    @hardware[:disks]       = []
+    @retired                = nil
+    @cpu_affinity           = nil
+    @numa_node_affinity     = nil
+    @has_rdm_disk           = false
+    @has_encrypted_disk     = false
+    @has_passthrough_device = false
+    @has_opaque_network     = false
+    @has_vm_ha_config       = false
+    @has_vm_drs_config      = false
+    @has_vm_affinity_config = false
+    @memory_hot_add_enabled = false
+    @cpu_hot_add_enabled    = false
+    @cpu_hot_remove_enabled = false
   end
    
   def as_json(options={})
     {
       id:                     @id,
       name:                   @name,
-      ems_ref:                @ems_ref,
       firmware:               @firmware,
       cpu_cores_per_socket:   @cpu_cores_per_socket,
       cpu_total_cores:        @cpu_total_cores,
@@ -146,8 +128,6 @@ class Vm < MtvBaseObject
       hardware:               @hardware
     }
   end
-  
-  
 end
 
 class Ems < MtvBaseObject
@@ -194,14 +174,15 @@ def mock_disk_shared
   disk
 end
 
-def create_vm(vm_attributes)
-  #puts "#{vm_attributes.inspect}"
-  Vm.new(vm_attributes)
-end
-
-def mock_vm_1(vm_attributes)
-  vm                                 = create_vm(vm_attributes)
+def mock_vm_1
+  vm                                 = Vm.new
+  vm.id                              = 2
+  vm.name                            = "pemcg-test01"
+  vm.firmware                        = "efi"
   vm.cpu_cores_per_socket            = 1
+  vm.cpu_total_cores                 = 1
+  vm.ballooned_memory                = 2048
+  vm.cpu_affinity                    = "0,2"
   vm.has_rdm_disk                    = true
   vm.has_opaque_network              = true
   vm.has_vm_drs_config               = true
@@ -210,16 +191,29 @@ def mock_vm_1(vm_attributes)
   vm.cpu_hot_remove_enabled          = true
   vm.used_disk_storage               = 135580876
   vm.host                            = {"ems_ref" => "host-29"}
+  vm.ram_size_in_bytes               = 2147483648
+  vm.operating_system[:product_type] = "Linux"
+  vm.operating_system[:product_name] = "Red Hat Enterprise Linux Server release 7.4 (Maipo)"
+  vm.hardware[:guest_os_full_name]   = "CentOS 7 (64-bit)"
   vm
 end
 
-def mock_vm_2(vm_attributes)
-  vm                                 = create_vm(vm_attributes)
-  vm.cpu_cores_per_socket            = 1
+def mock_vm_2
+  vm                                 = Vm.new
+  vm.id                              = 3
+  vm.name                            = "pemcg-test02"
+  vm.firmware                        = "bios"
+  vm.cpu_cores_per_socket            = 4
+  vm.cpu_total_cores                 = 8
+  vm.ballooned_memory                = 0
   vm.has_vm_drs_config               = true
   vm.has_vm_ha_config                = true
   vm.used_disk_storage               = 135580876
   vm.host                            = {"ems_ref" => "host-29"}
+  vm.ram_size_in_bytes               = 12147483648
+  vm.operating_system[:product_type] = "Linux"
+  vm.operating_system[:product_name] = "Red Hat Enterprise Linux Server release 8.2 (Ootpa)"
+  vm.hardware[:guest_os_full_name]   = "CentOS 8 (64-bit)"
   vm
 end
 
@@ -249,43 +243,13 @@ def mock_ems_cluster
   cluster
 end
 
-vm_rest_return =  [{
-  "id": "vm-1630",
-  "name": "fdupont-test-migration",
-  "uuid": "42251a...",
-  "firmware": "bios",
-  "cpuAffinity": "",
-  "cpuHostAddEnabled": false,
-  "cpuHostRemoveEnabled": false,
-  "memoryHotAddEnabled": false,
-  "cpuCount": 1,
-  "memorySizeMB": 2048,
-  "guestName": "Red Hat Enterprise Linux 7 (64-bit)",
-  "balloonedMemory": 0,
-  "ipAddress": ""
-},
-{
-  "id": "vm-2682",
-  "name": "pemcg-qpc01",
-  "uuid": "42251a...",
-  "firmware": "bios",
-  "cpuAffinity": "",
-  "cpuHostAddEnabled": false,
-  "cpuHostRemoveEnabled": false,
-  "memoryHotAddEnabled": false,
-  "cpuCount": 4,
-  "memorySizeMB": 4096,
-  "guestName": "Microsoft Windows Server 2016 or later (64-bit)",
-  "balloonedMemory": 0,
-  "ipAddress": ""
-}]           
+#  Assemble some mock data
 
 ems = mock_ems
 ems.hosts << mock_host
 ems.ems_clusters << mock_ems_cluster
-
-vm_rest_return.each.with_index(1) do |vm, n|
-  new_vm = self.send("mock_vm_#{n}", vm)
+[1,2].each do |n| 
+  new_vm = self.send("mock_vm_#{n}")
   new_vm.hardware[:disks] << self.send("mock_disk_#{n}")
   new_vm.hardware[:disks] << mock_disk_shared
   ems.vms << new_vm
