@@ -1,6 +1,8 @@
 require 'json'
 require 'date'
 
+# ----------- Class definitions --------------
+
 class MtvBaseObject
   def to_json(*options)
     as_json(*options).to_json(*options)
@@ -88,13 +90,6 @@ class Vm < MtvBaseObject
     @ems_ref                         = vm[:id]
     @operating_system                = {}
     @operating_system[:product_name] = vm[:guestName]
-    if /Linux/ =~ vm[:guestName]
-      @operating_system[:product_type] = "Linux"
-    elsif /Microsoft Windows Server/ =~ vm[:guestName]
-      @operating_system[:product_type] = "ServerNT"
-    else
-      @operating_system[:product_type] = "Unknown"
-    end
     @hardware                        = {}
     @hardware[:guest_os_full_name]   = vm[:guestName]
     @hardware[:disks]                = []
@@ -146,8 +141,6 @@ class Vm < MtvBaseObject
       hardware:               @hardware
     }
   end
-  
-  
 end
 
 class Ems < MtvBaseObject
@@ -176,6 +169,71 @@ class Ems < MtvBaseObject
   end
 end
 
+# ----------- End of class definitions --------------
+
+# ------------ Create object methods ----------------
+
+
+def create_vm(vm_attributes, disks, host_ems_ref)
+  vm                                   = Vm.new(vm_attributes)
+  vm.cpu_cores_per_socket              = 1
+  vm.host                              = {"ems_ref" => "#{host_ems_ref}"}
+  if /Linux/ =~ vm.operating_system[:product_name]
+    vm.operating_system[:product_type] = "Linux"
+  elsif /Microsoft Windows Server/ =~ vm.operating_system[:product_name]
+    vm.operating_system[:product_type] = "ServerNT"
+  else
+    vm.operating_system[:product_type] = "Unknown"
+  end
+  disks.each { |disk| vm.hardware[:disks] << disk }
+  vm
+end
+
+# ------------ End of create object methods ----------------
+
+
+# ------------ Get from API methods --------------
+
+def get_vms
+  [
+    {
+    "id": "vm-1630",
+    "name": "fdupont-test-migration",
+    "uuid": "42251a...",
+    "firmware": "bios",
+    "cpuAffinity": "",
+    "cpuHostAddEnabled": false,
+    "cpuHostRemoveEnabled": false,
+    "memoryHotAddEnabled": false,
+    "cpuCount": 1,
+    "memorySizeMB": 2048,
+    "guestName": "Red Hat Enterprise Linux 7 (64-bit)",
+    "balloonedMemory": 0,
+    "ipAddress": ""
+    },
+    {
+    "id": "vm-2682",
+    "name": "pemcg-qpc01",
+    "uuid": "42251a...",
+    "firmware": "bios",
+    "cpuAffinity": "",
+    "cpuHostAddEnabled": false,
+    "cpuHostRemoveEnabled": false,
+    "memoryHotAddEnabled": false,
+    "cpuCount": 4,
+    "memorySizeMB": 4096,
+    "guestName": "Microsoft Windows Server 2016 or later (64-bit)",
+    "balloonedMemory": 0,
+    "ipAddress": ""
+    }
+  ]
+end
+
+# ----------- End of Get methods --------------
+
+
+# ------------ Mock methods -------------------
+
 def mock_disk_1
   disk = VmDisk.new
   disk.filename = "[datastore13] pemcg-test01/pemcg-test01.vmdk"
@@ -194,14 +252,8 @@ def mock_disk_shared
   disk
 end
 
-def create_vm(vm_attributes)
-  #puts "#{vm_attributes.inspect}"
-  Vm.new(vm_attributes)
-end
-
-def mock_vm_1(vm_attributes)
-  vm                                 = create_vm(vm_attributes)
-  vm.cpu_cores_per_socket            = 1
+def mock_vm_1(vm_attributes,disks)
+  vm                                 = create_vm(vm_attributes,disks,"host-29")
   vm.has_rdm_disk                    = true
   vm.has_opaque_network              = true
   vm.has_vm_drs_config               = true
@@ -209,17 +261,14 @@ def mock_vm_1(vm_attributes)
   vm.cpu_hot_add_enabled             = true
   vm.cpu_hot_remove_enabled          = true
   vm.used_disk_storage               = 135580876
-  vm.host                            = {"ems_ref" => "host-29"}
   vm
 end
 
-def mock_vm_2(vm_attributes)
-  vm                                 = create_vm(vm_attributes)
-  vm.cpu_cores_per_socket            = 1
+def mock_vm_2(vm_attributes,disks)
+  vm                                 = create_vm(vm_attributes,disks,"host-29")
   vm.has_vm_drs_config               = true
   vm.has_vm_ha_config                = true
   vm.used_disk_storage               = 135580876
-  vm.host                            = {"ems_ref" => "host-29"}
   vm
 end
 
@@ -249,45 +298,17 @@ def mock_ems_cluster
   cluster
 end
 
-vm_rest_return =  [{
-  "id": "vm-1630",
-  "name": "fdupont-test-migration",
-  "uuid": "42251a...",
-  "firmware": "bios",
-  "cpuAffinity": "",
-  "cpuHostAddEnabled": false,
-  "cpuHostRemoveEnabled": false,
-  "memoryHotAddEnabled": false,
-  "cpuCount": 1,
-  "memorySizeMB": 2048,
-  "guestName": "Red Hat Enterprise Linux 7 (64-bit)",
-  "balloonedMemory": 0,
-  "ipAddress": ""
-},
-{
-  "id": "vm-2682",
-  "name": "pemcg-qpc01",
-  "uuid": "42251a...",
-  "firmware": "bios",
-  "cpuAffinity": "",
-  "cpuHostAddEnabled": false,
-  "cpuHostRemoveEnabled": false,
-  "memoryHotAddEnabled": false,
-  "cpuCount": 4,
-  "memorySizeMB": 4096,
-  "guestName": "Microsoft Windows Server 2016 or later (64-bit)",
-  "balloonedMemory": 0,
-  "ipAddress": ""
-}]           
+# ------------ End of Mock methods -------------------
+
+
+# ------------- Main ---------------------
 
 ems = mock_ems
 ems.hosts << mock_host
 ems.ems_clusters << mock_ems_cluster
 
-vm_rest_return.each.with_index(1) do |vm, n|
-  new_vm = self.send("mock_vm_#{n}", vm)
-  new_vm.hardware[:disks] << self.send("mock_disk_#{n}")
-  new_vm.hardware[:disks] << mock_disk_shared
+get_vms.each.with_index(1) do |vm, n|
+  new_vm = self.send("mock_vm_#{n}", vm, [self.send("mock_disk_#{n}"), self.send("mock_disk_shared")])
   ems.vms << new_vm
 end
 
