@@ -48,15 +48,15 @@
             "disks": [
               {
               	"device_type": "disk",
-                "filename": "[datastore13] pemcg-test01/pemcg-test01.vmdk",
+                "filename": "[datastore13] pemcg-test01/pemcg-test01.vmdk"
               },
               {
               	"device_type": "disk",
-                "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk",
+                "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk"
               }
             ]
            }
-      	}
+      	},
         {
           "id": 3,
           "name": "pemcg-test02",
@@ -91,11 +91,11 @@
             "disks": [
               {
               	"device_type": "disk",
-                "filename": "[datastore13] pemcg-test02/pemcg-test02.vmdk",
+                "filename": "[datastore13] pemcg-test02/pemcg-test02.vmdk"
               },
               {
               	"device_type": "disk",
-                "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk",
+                "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk"
               }
             ]
            }
