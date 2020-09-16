@@ -1,5 +1,5 @@
 {
-  "data_collected_on": "2020-07-24T16:20:50.787Z",
+  "data_collected_on": "2020-09-16 13:31:42 UTC",
   "schema": {
     "name": "Mtv"
   },
@@ -8,115 +8,112 @@
       "version": "1.0.0"
     }
   },
-  "ManageIQ::Providers::Vmware::InfraManager": [
-    {
+  "ManageIQ::Providers::Vmware::InfraManager": [{
       "name": "Test VMware",
       "api_version": "6.5",
       "emstype_description": "VMware vCenter",
-      "vms": [
-        {
-          "id": 2,
-          "name": "pemcg-test01",
-          "firmware": "bios",
-          "cpu_cores_per_socket": 1,
-          "cpu_total_cores": 2,
+      "vms": [{
+          "id": "42251a...",
+          "name": "fdupont-test-migration",
           "ballooned_memory": 0,
-          "cpu_affinity": null,
-          "numa_node_affinity": null,
-          "has_rdm_disk": false,
-          "has_encrypted_disk": true,
-          "has_passthrough_device": true,
-          "has_opaque_network": false,
-          "has_vm_ha_config": true,
-          "has_vm_drs_config": false,
-          "has_vm_affinity_config": false,
-          "memory_hot_add_enabled": false,
-          "cpu_hot_add_enabled": false,
-          "cpu_hot_remove_enabled": false,
-          "used_disk_storage": 1355808768,
-          "host": {
-            "ems_ref": "host-29"
-          },
-          "ram_size_in_bytes": 2147483648,
-          "retired": null,
-          "operating_system": {
-            "product_type": "Linux",
-            "product_name": "Red Hat Enterprise Linux Server release 8.2 (Ootpa)"
-          },
-          "hardware": {
-            "guest_os_full_name": "CentOS 8 (64-bit)",
-            "disks": [
-              {
-              	"device_type": "disk",
-                "filename": "[datastore13] pemcg-test01/pemcg-test01.vmdk"
-              },
-              {
-              	"device_type": "disk",
-                "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk"
-              }
-            ]
-           }
-      	},
-        {
-          "id": 3,
-          "name": "pemcg-test02",
-          "firmware": "efi",
+          "cpu_affinity": "",
           "cpu_cores_per_socket": 1,
-          "cpu_total_cores": 1,
-          "ballooned_memory": 2048,
-          "cpu_affinity": "0,2",
-          "numa_node_affinity": null,
-          "has_rdm_disk": true,
-          "has_encrypted_disk": false,
-          "has_passthrough_device": false,
-          "has_opaque_network": true,
-          "has_vm_ha_config": false,
-          "has_vm_drs_config": true,
-          "has_vm_affinity_config": false,
-          "memory_hot_add_enabled": true,
           "cpu_hot_add_enabled": true,
           "cpu_hot_remove_enabled": true,
-          "used_disk_storage": 135580876,
+          "cpu_total_cores": 1,
+          "ems_ref": "vm-1630",
+          "firmware": "bios",
+          "folder_path": "",
+          "has_encrypted_disk": false,
+          "has_opaque_network": true,
+          "has_passthrough_device": false,
+          "has_rdm_disk": true,
+          "has_usb_controller": false,
+          "has_vm_affinity_config": false,
+          "has_vm_drs_config": true,
+          "has_vm_ha_config": false,
           "host": {
             "ems_ref": "host-29"
           },
+          "memory_hot_add_enabled": true,
+          "numa_node_affinity": null,
           "ram_size_in_bytes": 2147483648,
           "retired": null,
-          "operating_system": {
-            "product_type": "Linux",
-            "product_name": "Red Hat Enterprise Linux Server release 7.4 (Maipo)"
-          },
+          "used_disk_storage": 135580876,
           "hardware": {
-            "guest_os_full_name": "CentOS 7 (64-bit)",
-            "disks": [
-              {
-              	"device_type": "disk",
-                "filename": "[datastore13] pemcg-test02/pemcg-test02.vmdk"
-              },
-              {
-              	"device_type": "disk",
+            "disks": [{
+                "device_type": "disk",
+                "filename": "[datastore13] pemcg-test01/pemcg-test01.vmdk"
+              }, {
+                "device_type": "disk",
                 "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk"
               }
-            ]
-           }
-      	}
-      ],
-      "ems_clusters": [
-        {
-          "name": "V2V_Cluster",
-          "ems_ref": "domain-c26",
-          "v_parent_datacenter": "V2V-DC"
+            ],
+            "guest_os_full_name": "Red Hat Enterprise Linux 7 (64-bit)"
+          },
+          "operating_system": {
+            "product_name": "Red Hat Enterprise Linux 7 (64-bit)",
+            "product_type": "Linux"
+          }
+        }, {
+          "id": "42251a...",
+          "name": "pemcg-qpc01",
+          "ballooned_memory": 0,
+          "cpu_affinity": "",
+          "cpu_cores_per_socket": 1,
+          "cpu_hot_add_enabled": false,
+          "cpu_hot_remove_enabled": false,
+          "cpu_total_cores": 4,
+          "ems_ref": "vm-2682",
+          "firmware": "bios",
+          "folder_path": "Workloads/Linux",
+          "has_encrypted_disk": false,
+          "has_opaque_network": false,
+          "has_passthrough_device": false,
+          "has_rdm_disk": false,
+          "has_usb_controller": true,
+          "has_vm_affinity_config": false,
+          "has_vm_drs_config": true,
+          "has_vm_ha_config": true,
+          "host": {
+            "ems_ref": "host-29"
+          },
+          "memory_hot_add_enabled": false,
+          "numa_node_affinity": null,
+          "ram_size_in_bytes": 4294967296,
+          "retired": null,
+          "used_disk_storage": 135580876,
+          "hardware": {
+            "disks": [{
+                "device_type": "disk",
+                "filename": "[datastore13] pemcg-test02/pemcg-test02.vmdk"
+              }, {
+                "device_type": "disk",
+                "filename": "[datastore13] pemcg-shared/pemcg-shared.vmdk"
+              }
+            ],
+            "guest_os_full_name": "Microsoft Windows Server 2016 or later (64-bit)"
+          },
+          "operating_system": {
+            "product_name": "Microsoft Windows Server 2016 or later (64-bit)",
+            "product_type": "ServerNT"
+          }
         }
       ],
-      "hosts": [
-        {
+      "hosts": [{
           "hostname": "esx13.v2v.bos.redhat.com",
           "ems_ref": "host-29",
-          "cpu_cores_per_socket": 8,
-          "cpu_total_cores": 16,
+          "cpu_cores_per_socket": 4,
+          "cpu_total_cores": 8,
           "ems_cluster": {
             "ems_ref": "domain-c26"
           }
+        }
+      ],
+      "ems_clusters": [{
+          "name": "V2V_Cluster",
+          "ems_ref": "domain-c26",
+          "v_parent_datacenter": "V2V-DC"
         }
       ]
     }

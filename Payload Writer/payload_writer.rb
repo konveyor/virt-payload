@@ -58,87 +58,96 @@ class VmDisk < MtvBaseObject
 end
 
 class Vm < MtvBaseObject
-  attr_writer   :id
-  attr_writer   :name
-  attr_writer   :ems_ref
-  attr_writer   :firmware
-  attr_writer   :cpu_cores_per_socket
-  attr_writer   :cpu_total_cores
+  attr_accessor :hardware
+  attr_accessor :operating_system
   attr_writer   :ballooned_memory
   attr_writer   :cpu_affinity
-  attr_writer   :numa_node_affinity
-  attr_writer   :has_rdm_disk
-  attr_writer   :has_encrypted_disk
-  attr_writer   :has_passthrough_device
-  attr_writer   :has_opaque_network
-  attr_writer   :has_vm_ha_config
-  attr_writer   :has_vm_drs_config
-  attr_writer   :has_vm_affinity_config
-  attr_writer   :memory_hot_add_enabled
+  attr_writer   :cpu_cores_per_socket
   attr_writer   :cpu_hot_add_enabled
   attr_writer   :cpu_hot_remove_enabled
-  attr_writer   :used_disk_storage
+  attr_writer   :cpu_total_cores
+  attr_writer   :ems_ref
+  attr_writer   :firmware
+  attr_writer   :folder_path
+  attr_writer   :has_encrypted_disk
+  attr_writer   :has_opaque_network
+  attr_writer   :has_passthrough_device
+  attr_writer   :has_rdm_disk
+  attr_writer   :has_usb_controller
+  attr_writer   :has_vm_affinity_config
+  attr_writer   :has_vm_drs_config
+  attr_writer   :has_vm_ha_config
   attr_writer   :host
+  attr_writer   :id
+  attr_writer   :memory_hot_add_enabled
+  attr_writer   :name
+  attr_writer   :numa_node_affinity
   attr_writer   :ram_size_in_bytes
   attr_writer   :retired
-  attr_accessor :operating_system
-  attr_accessor :hardware
+  attr_writer   :used_disk_storage
   
   def initialize(vm)
-    @id                              = vm[:uuid]
-    @name                            = vm[:name]
-    @ems_ref                         = vm[:id]
-    @operating_system                = {}
-    @operating_system[:product_name] = vm[:guestName]
     @hardware                        = {}
-    @hardware[:guest_os_full_name]   = vm[:guestName]
     @hardware[:disks]                = []
-    @retired                         = nil
-    @cpu_total_cores                 = vm[:cpuCount]
-    @cpu_affinity                    = vm[:cpuAffinity]
-    @numa_node_affinity              = nil
-    @ram_size_in_bytes               = vm[:memorySizeMB] * 1048576
+    @hardware[:guest_os_full_name]   = vm[:guestName]
+    @operating_system                = {}
+    @operating_system[:product_name] = vm[:guestName]    
     @ballooned_memory                = vm[:balloonedMemory]
-    @firmware                        = vm[:firmware]
-    @has_rdm_disk                    = false
-    @has_encrypted_disk              = false
-    @has_passthrough_device          = false
-    @has_opaque_network              = false
-    @has_vm_ha_config                = false
-    @has_vm_drs_config               = false
-    @has_vm_affinity_config          = false
-    @memory_hot_add_enabled          = vm[:memoryHotAddEnabled]
+    @cpu_affinity                    = vm[:cpuAffinity]
+    @cpu_cores_per_socket            = 1
     @cpu_hot_add_enabled             = vm[:cpuHostAddEnabled]
     @cpu_hot_remove_enabled          = vm[:cpuHostRemoveEnabled]
+    @cpu_total_cores                 = vm[:cpuCount]
+    @ems_ref                         = vm[:id]
+    @firmware                        = vm[:firmware]
+    @folder_path                     = ""
+    @has_encrypted_disk              = false
+    @has_opaque_network              = false
+    @has_passthrough_device          = false
+    @has_rdm_disk                    = false
+    @has_usb_controller              = false
+    @has_vm_affinity_config          = false
+    @has_vm_drs_config               = false
+    @has_vm_ha_config                = false
+    @host                            = ""
+    @id                              = vm[:uuid]
+    @memory_hot_add_enabled          = vm[:memoryHotAddEnabled]
+    @name                            = vm[:name]
+    @numa_node_affinity              = nil
+    @ram_size_in_bytes               = vm[:memorySizeMB] * 1048576
+    @retired                         = nil
+    @used_disk_storage               = 0
   end
    
   def as_json(options={})
     {
       id:                     @id,
       name:                   @name,
-      ems_ref:                @ems_ref,
-      firmware:               @firmware,
-      cpu_cores_per_socket:   @cpu_cores_per_socket,
-      cpu_total_cores:        @cpu_total_cores,
       ballooned_memory:       @ballooned_memory,
       cpu_affinity:           @cpu_affinity,
-      numa_node_affinity:     @numa_node_affinity,
-      has_rdm_disk:           @has_rdm_disk,
-      has_encrypted_disk:     @has_encrypted_disk,
-      has_passthrough_device: @has_passthrough_device,
-      has_opaque_network:     @has_opaque_network,
-      has_vm_ha_config:       @has_vm_ha_config,
-      has_vm_drs_config:      @has_vm_drs_config,
-      has_vm_affinity_config: @has_vm_affinity_config,
-      memory_hot_add_enabled: @memory_hot_add_enabled,
+      cpu_cores_per_socket:   @cpu_cores_per_socket,
       cpu_hot_add_enabled:    @cpu_hot_add_enabled,
       cpu_hot_remove_enabled: @cpu_hot_remove_enabled,
-      used_disk_storage:      @used_disk_storage,
+      cpu_total_cores:        @cpu_total_cores,
+      ems_ref:                @ems_ref,
+      firmware:               @firmware,
+      folder_path:            @folder_path,
+      has_encrypted_disk:     @has_encrypted_disk,
+      has_opaque_network:     @has_opaque_network,
+      has_passthrough_device: @has_passthrough_device,
+      has_rdm_disk:           @has_rdm_disk,
+      has_usb_controller:     @has_usb_controller,
+      has_vm_affinity_config: @has_vm_affinity_config,
+      has_vm_drs_config:      @has_vm_drs_config,
+      has_vm_ha_config:       @has_vm_ha_config,
       host:                   @host,
+      memory_hot_add_enabled: @memory_hot_add_enabled,
+      numa_node_affinity:     @numa_node_affinity,
       ram_size_in_bytes:      @ram_size_in_bytes,
       retired:                @retired,
-      operating_system:       @operating_system,
-      hardware:               @hardware
+      used_disk_storage:      @used_disk_storage,
+      hardware:               @hardware,
+      operating_system:       @operating_system
     }
   end
 end
@@ -268,6 +277,8 @@ def mock_vm_2(vm_attributes,disks)
   vm                                 = create_vm(vm_attributes,disks,"host-29")
   vm.has_vm_drs_config               = true
   vm.has_vm_ha_config                = true
+  vm.has_usb_controller              = true
+  vm.folder_path                     = "Workloads/Linux"
   vm.used_disk_storage               = 135580876
   vm
 end
