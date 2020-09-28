@@ -4,11 +4,11 @@ require 'rest-client'
 require 'sinatra'
 require "sinatra/namespace"
 
-base_uri      = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
-vms_path      = "/namespaces/openshift-migration/providers/vsphere/test/vms?detail=1".freeze
-ems_path      = "/namespaces/openshift-migration/providers/vsphere/test/vms/vm-2696".freeze
-folders_path  = "/namespaces/openshift-migration/providers/vsphere/test/folders".freeze
-topology_path = "/namespaces/openshift-migration/providers/vsphere/test/tree/host".freeze
+BASE_URI      = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
+VMS_PATH      = "/namespaces/openshift-migration/providers/vsphere/test/vms?detail=1".freeze
+EMS_PATH      = "/namespaces/openshift-migration/providers/vsphere/test/vms/vm-2696".freeze
+FOLDERS_PATH  = "/namespaces/openshift-migration/providers/vsphere/test/folders".freeze
+TOPOLOGY_PATH = "/namespaces/openshift-migration/providers/vsphere/test/tree/host".freeze
 folders = {}
 
 # ----------- Class definitions --------------
@@ -304,7 +304,6 @@ def get_vms(base_uri, path)
 end
 
 def get_vm_host_map(base_uri, path)
-  
   rest_return = RestClient::Request.execute(method: :get,
                                             url: base_uri + path,
                                             :headers => {:accept => :json},
@@ -368,14 +367,14 @@ end
 # ------------- Main ---------------------
 
 def extract
-  @folder_paths = get_folder_paths(base_uri, folders_path)
+  $folder_paths = get_folder_paths(BASE_URI, FOLDERS_PATH)
   
   ems = mock_ems
-  vm_host_map = get_vm_host_map(base_uri, topology_path)
+  vm_host_map = get_vm_host_map(BASE_URI, TOPOLOGY_PATH)
   ems.hosts << mock_host
   ems.ems_clusters << mock_ems_cluster
   
-  get_vms(base_uri, vms_path).each do |vm|
+  get_vms(BASE_URI, VMS_PATH).each do |vm|
     ems.vms << create_vm(vm, vm_host_map[vm['id']])
   end
   
@@ -399,7 +398,7 @@ def extract
 end
 
 
-namespace '/api/v1 ' do
+namespace '/api/v1' do
 
   before do
     content_type 'application/json'
