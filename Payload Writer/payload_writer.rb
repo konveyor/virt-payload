@@ -1,5 +1,15 @@
 require 'json'
 require 'date'
+require 'rest-client'
+require 'sinatra'
+require "sinatra/namespace"
+
+base_uri      = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
+vms_path      = "/namespaces/openshift-migration/providers/vsphere/test/vms?detail=1".freeze
+ems_path      = "/namespaces/openshift-migration/providers/vsphere/test/vms/vm-2696".freeze
+folders_path  = "/namespaces/openshift-migration/providers/vsphere/test/folders".freeze
+topology_path = "/namespaces/openshift-migration/providers/vsphere/test/tree/host".freeze
+folders = {}
 
 # ----------- Class definitions --------------
 
@@ -88,18 +98,18 @@ class Vm < MtvBaseObject
   
   def initialize(vm)
     @hardware                        = {}
-    @hardware[:disks]                = []
-    @hardware[:guest_os_full_name]   = vm[:guestName]
+    @hardware['disks']               = []
+    @hardware['guest_os_full_name']  = vm['guestName']
     @operating_system                = {}
-    @operating_system[:product_name] = vm[:guestName]    
-    @ballooned_memory                = vm[:balloonedMemory]
-    @cpu_affinity                    = vm[:cpuAffinity]
+    @operating_system['product_name'] = vm['guestName']    
+    @ballooned_memory                = vm['balloonedMemory']
+    @cpu_affinity                    = vm['cpuAffinity']
     @cpu_cores_per_socket            = 1
-    @cpu_hot_add_enabled             = vm[:cpuHostAddEnabled]
-    @cpu_hot_remove_enabled          = vm[:cpuHostRemoveEnabled]
-    @cpu_total_cores                 = vm[:cpuCount]
-    @ems_ref                         = vm[:id]
-    @firmware                        = vm[:firmware]
+    @cpu_hot_add_enabled             = vm['cpuHostAddEnabled']
+    @cpu_hot_remove_enabled          = vm['cpuHostRemoveEnabled']
+    @cpu_total_cores                 = vm['cpuCount']
+    @ems_ref                         = vm['id']
+    @firmware                        = vm['firmware']
     @folder_path                     = ""
     @has_encrypted_disk              = false
     @has_opaque_network              = false
@@ -110,11 +120,11 @@ class Vm < MtvBaseObject
     @has_vm_drs_config               = false
     @has_vm_ha_config                = false
     @host                            = ""
-    @id                              = vm[:uuid]
-    @memory_hot_add_enabled          = vm[:memoryHotAddEnabled]
-    @name                            = vm[:name]
+    @id                              = vm['uuid']
+    @memory_hot_add_enabled          = vm['memoryHotAddEnabled']
+    @name                            = vm['name']
     @numa_node_affinity              = nil
-    @ram_size_in_bytes               = vm[:memorySizeMB] * 1048576
+    @ram_size_in_bytes               = vm['memoryMB'] * 1048576
     @retired                         = nil
     @used_disk_storage               = 0
   end
@@ -183,105 +193,148 @@ end
 # ------------ Create object methods ----------------
 
 
-def create_vm(vm_attributes, disks, host_ems_ref)
-  vm                                   = Vm.new(vm_attributes)
-  vm.cpu_cores_per_socket              = 1
-  vm.host                              = {"ems_ref" => "#{host_ems_ref}"}
-  if /Linux/ =~ vm.operating_system[:product_name]
-    vm.operating_system[:product_type] = "Linux"
-  elsif /Microsoft Windows Server/ =~ vm.operating_system[:product_name]
-    vm.operating_system[:product_type] = "ServerNT"
+def create_vm(vm, host_ems_ref)
+  folder_path                 = @folder_paths[vm["parent"]["ID"]]
+  new_vm                      = Vm.new(vm)
+  new_vm.cpu_cores_per_socket = 1
+  new_vm.host                 = {"ems_ref" => "#{host_ems_ref}"}
+  new_vm.folder_path          = folder_path unless folder_path == "vm"
+  
+  if /Linux/ =~ new_vm.operating_system['product_name']
+    new_vm.operating_system['product_type'] = "Linux"
+  elsif /Microsoft Windows Server/ =~ new_vm.operating_system['product_name']
+    new_vm.operating_system['product_type'] = "ServerNT"
   else
-    vm.operating_system[:product_type] = "Unknown"
+    new_vm.operating_system['product_type'] = "Unknown"
   end
-  disks.each { |disk| vm.hardware[:disks] << disk }
-  vm
+  
+  new_vm.hardware['disks'] = format_disks(vm['disks'])
+  new_vm
 end
 
 # ------------ End of create object methods ----------------
 
 
+# ------------ Utility methods ---------------
+
+def find_folder_path(api_folders, folder)
+  if folder["parent"]["Kind"] == "Folder"
+    parent = find_folder_path(api_folders, api_folders.detect {|f| f["id"] == folder["parent"]["ID"]})
+    parent == "vm" ? path = folder["name"] : path = "#{parent}/#{folder["name"]}"
+  else
+    path = folder["name"]
+  end
+  path
+end
+
+def format_disks(disks)
+  formatted_disks = []
+  disks.each do |disk|
+    formatted_disks << { "device_type": "disk", "filename": disk["file"] }
+  end
+  formatted_disks
+end
+
+def datacenters_per_database(topology)
+  datacenters = []
+  if topology["kind"] == ""
+    unless topology["children"].nil? || topology["children"].empty?
+      topology["children"].each do |child|
+        datacenters << child if child["kind"] == "Datacenter"
+      end
+    end
+  end
+  datacenters
+end
+    
+def clusters_per_datacenter(topology)
+  clusters = []
+  topology.each do |obj|
+    if obj["kind"] == "Datacenter"
+      unless obj["children"].nil? || obj["children"].empty?
+        obj["children"].each do |child|
+          clusters << child if child["kind"] == "Cluster"
+        end
+      end
+    end
+  end
+  clusters
+end
+  
+def hosts_per_cluster(topology)
+  hosts = []
+  topology.each do |obj|
+    if obj["kind"] == "Cluster"
+      unless obj["children"].nil? || obj["children"].empty?
+        obj["children"].each do |child|
+          hosts << child if child["kind"] == "Host"
+        end
+      end
+    end
+  end
+  hosts
+end
+
+def vms_per_host(hosts)
+  vm_host_map = {}
+  hosts.each do |host|
+    unless host["kind"] != "Host"
+      unless host["children"].nil? || host["children"].empty?
+        host["children"].each do |child|
+          vm_host_map[child["object"]["id"]] = host["object"]["id"] if child["kind"] == "VM"
+        end
+      end
+    end
+  end
+  vm_host_map  
+end
+
+# ------------ End of utility methods ----------------
+
+
 # ------------ Get from API methods --------------
 
-def get_vms
-  [
-    {
-    "id": "vm-1630",
-    "name": "fdupont-test-migration",
-    "uuid": "42251a...",
-    "firmware": "bios",
-    "cpuAffinity": "",
-    "cpuHostAddEnabled": false,
-    "cpuHostRemoveEnabled": false,
-    "memoryHotAddEnabled": false,
-    "cpuCount": 1,
-    "memorySizeMB": 2048,
-    "guestName": "Red Hat Enterprise Linux 7 (64-bit)",
-    "balloonedMemory": 0,
-    "ipAddress": ""
-    },
-    {
-    "id": "vm-2682",
-    "name": "pemcg-qpc01",
-    "uuid": "42251a...",
-    "firmware": "bios",
-    "cpuAffinity": "",
-    "cpuHostAddEnabled": false,
-    "cpuHostRemoveEnabled": false,
-    "memoryHotAddEnabled": false,
-    "cpuCount": 4,
-    "memorySizeMB": 4096,
-    "guestName": "Microsoft Windows Server 2016 or later (64-bit)",
-    "balloonedMemory": 0,
-    "ipAddress": ""
-    }
-  ]
+def get_vms(base_uri, path)
+  rest_return = RestClient::Request.execute(method: :get,
+                                            url: base_uri + path,
+                                            :headers => {:accept => :json},
+                                            verify_ssl: false)
+  result = JSON.parse(rest_return)
+  result = result.is_a?(Array) ? result : result.nil? ? [] : [result]
+end
+
+def get_vm_host_map(base_uri, path)
+  
+  rest_return = RestClient::Request.execute(method: :get,
+                                            url: base_uri + path,
+                                            :headers => {:accept => :json},
+                                            verify_ssl: false)
+  result = JSON.parse(rest_return)
+  hosts = hosts_per_cluster(clusters_per_datacenter(datacenters_per_database(result)))
+  vms_per_host(hosts)
+end
+
+def get_ems(base_uri, path)
+  puts "in get_ems"
+end
+
+def get_folder_paths(base_uri, path)
+  folders = {}
+  rest_return = RestClient::Request.execute(method: :get,
+                                            url: base_uri + path,
+                                            :headers => {:accept => :json},
+                                            verify_ssl: false)
+  api_folders = JSON.parse(rest_return)
+  api_folders.each do |folder|
+    folders[folder['id']] = find_folder_path(api_folders, folder)
+  end
+  folders
 end
 
 # ----------- End of Get methods --------------
 
 
 # ------------ Mock methods -------------------
-
-def mock_disk_1
-  disk = VmDisk.new
-  disk.filename = "[datastore13] pemcg-test01/pemcg-test01.vmdk"
-  disk
-end
-
-def mock_disk_2
-  disk = VmDisk.new
-  disk.filename = "[datastore13] pemcg-test02/pemcg-test02.vmdk"
-  disk
-end
-
-def mock_disk_shared
-  disk = VmDisk.new
-  disk.filename = "[datastore13] pemcg-shared/pemcg-shared.vmdk"
-  disk
-end
-
-def mock_vm_1(vm_attributes,disks)
-  vm                                 = create_vm(vm_attributes,disks,"host-29")
-  vm.has_rdm_disk                    = true
-  vm.has_opaque_network              = true
-  vm.has_vm_drs_config               = true
-  vm.memory_hot_add_enabled          = true
-  vm.cpu_hot_add_enabled             = true
-  vm.cpu_hot_remove_enabled          = true
-  vm.used_disk_storage               = 135580876
-  vm
-end
-
-def mock_vm_2(vm_attributes,disks)
-  vm                                 = create_vm(vm_attributes,disks,"host-29")
-  vm.has_vm_drs_config               = true
-  vm.has_vm_ha_config                = true
-  vm.has_usb_controller              = true
-  vm.folder_path                     = "Workloads/Linux"
-  vm.used_disk_storage               = 135580876
-  vm
-end
 
 def mock_ems
   ems                     = Ems.new
@@ -314,29 +367,45 @@ end
 
 # ------------- Main ---------------------
 
-ems = mock_ems
-ems.hosts << mock_host
-ems.ems_clusters << mock_ems_cluster
-
-get_vms.each.with_index(1) do |vm, n|
-  new_vm = self.send("mock_vm_#{n}", vm, [self.send("mock_disk_#{n}"), self.send("mock_disk_shared")])
-  ems.vms << new_vm
+def extract
+  @folder_paths = get_folder_paths(base_uri, folders_path)
+  
+  ems = mock_ems
+  vm_host_map = get_vm_host_map(base_uri, topology_path)
+  ems.hosts << mock_host
+  ems.ems_clusters << mock_ems_cluster
+  
+  get_vms(base_uri, vms_path).each do |vm|
+    ems.vms << create_vm(vm, vm_host_map[vm['id']])
+  end
+  
+  all_vcenters = []
+  all_vcenters << ems
+  
+  payload = {
+    "data_collected_on": "#{Time.now.utc}",
+    "schema": {
+      "name": "Mtv"
+    },
+    "manifest": {
+      "manifest": {
+        "version": "1.0.0"
+      }
+    },
+    "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
+  }
+  
+  puts payload.to_json
 end
 
-all_vcenters = []
-all_vcenters << ems
 
-payload = {
-  "data_collected_on": "#{Time.now.utc}",
-  "schema": {
-    "name": "Mtv"
-  },
-  "manifest": {
-    "manifest": {
-      "version": "1.0.0"
-    }
-  },
-  "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
-}
+namespace '/api/v1 ' do
 
-puts payload.to_json
+  before do
+    content_type 'application/json'
+  end
+
+  get '/extract' do
+    extract
+  end
+end
