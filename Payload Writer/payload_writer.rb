@@ -6,10 +6,10 @@ require "sinatra/namespace"
 
 BASE_URI      = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
 VMS_PATH      = "/namespaces/openshift-migration/providers/vsphere/test/vms?detail=1".freeze
-EMS_PATH      = "/namespaces/openshift-migration/providers/vsphere/test/vms/vm-2696".freeze
+HOSTS_PATH    = "/namespaces/openshift-migration/providers/vsphere/test/hosts?detail=1".freeze
+CLUSTERS_PATH = "/namespaces/openshift-migration/providers/vsphere/test/clusters?detail=1".freeze
 FOLDERS_PATH  = "/namespaces/openshift-migration/providers/vsphere/test/folders".freeze
 TOPOLOGY_PATH = "/namespaces/openshift-migration/providers/vsphere/test/tree/host".freeze
-folders = {}
 
 # ----------- Class definitions --------------
 
@@ -26,6 +26,13 @@ class Host < MtvBaseObject
   attr_writer :cpu_total_cores
   attr_writer :ems_cluster
   
+  def initialize(host)
+    @hostname             = host['name']
+    @ems_ref              = host['id']
+    @cpu_cores_per_socket = 6
+    @cpu_total_cores      = 12
+  end
+  
   def as_json(options={})
     {
       hostname:             @hostname,
@@ -41,6 +48,11 @@ class EmsCluster < MtvBaseObject
   attr_writer :name
   attr_writer :ems_ref
   attr_writer :v_parent_datacenter
+  
+  def initialize(cluster)
+    @name    = cluster['name']
+    @ems_ref = cluster['id']
+  end
   
   def as_json(options={})
     {
@@ -212,6 +224,18 @@ def create_vm(vm, host_ems_ref)
   new_vm
 end
 
+def create_host(host, cluster_ems_ref)
+  new_host                      = Host.new(host)
+  new_host.ems_cluster          = {"ems_ref": "#{cluster_ems_ref}"}
+  new_host  
+end
+
+def create_cluster(cluster, dc_name)
+  new_cluster                     = EmsCluster.new(cluster)
+  new_cluster.v_parent_datacenter = dc_name
+  new_cluster
+end
+
 # ------------ End of create object methods ----------------
 
 
@@ -247,13 +271,17 @@ def datacenters_per_database(topology)
   datacenters
 end
     
-def clusters_per_datacenter(topology)
+def clusters_per_datacenter(dcs)
   clusters = []
-  topology.each do |obj|
-    if obj["kind"] == "Datacenter"
-      unless obj["children"].nil? || obj["children"].empty?
-        obj["children"].each do |child|
-          clusters << child if child["kind"] == "Cluster"
+  @cluster_dc_map = {}
+  dcs.each do |dc|
+    if dc["kind"] == "Datacenter"
+      unless dc["children"].nil? || dc["children"].empty?
+        dc["children"].each do |child|
+          if child["kind"] == "Cluster"
+            clusters << child
+            @cluster_dc_map[child["object"]["id"]] = dc["object"]["name"]
+          end
         end
       end
     end
@@ -261,13 +289,17 @@ def clusters_per_datacenter(topology)
   clusters
 end
   
-def hosts_per_cluster(topology)
+def hosts_per_cluster(clusters)
   hosts = []
-  topology.each do |obj|
-    if obj["kind"] == "Cluster"
-      unless obj["children"].nil? || obj["children"].empty?
-        obj["children"].each do |child|
-          hosts << child if child["kind"] == "Host"
+  @host_cluster_map = {}
+  clusters.each do |cluster|
+    if cluster["kind"] == "Cluster"
+      unless cluster["children"].nil? || cluster["children"].empty?
+        cluster["children"].each do |child|
+          if child["kind"] == "Host"
+            hosts << child
+            @host_cluster_map[child["object"]["id"]] = cluster["object"]["id"]
+          end            
         end
       end
     end
@@ -276,17 +308,20 @@ def hosts_per_cluster(topology)
 end
 
 def vms_per_host(hosts)
-  vm_host_map = {}
+  vms = []
+  @vm_host_map = {}
   hosts.each do |host|
     unless host["kind"] != "Host"
       unless host["children"].nil? || host["children"].empty?
         host["children"].each do |child|
-          vm_host_map[child["object"]["id"]] = host["object"]["id"] if child["kind"] == "VM"
+          if child["kind"] == "VM"
+            vms << child
+            @vm_host_map[child["object"]["id"]] = host["object"]["id"]
+          end
         end
       end
     end
   end
-  vm_host_map  
 end
 
 # ------------ End of utility methods ----------------
@@ -294,7 +329,7 @@ end
 
 # ------------ Get from API methods --------------
 
-def get_vms(base_uri, path)
+def retrieve(base_uri, path)
   rest_return = RestClient::Request.execute(method: :get,
                                             url: base_uri + path,
                                             :headers => {:accept => :json},
@@ -303,18 +338,13 @@ def get_vms(base_uri, path)
   result = result.is_a?(Array) ? result : result.nil? ? [] : [result]
 end
 
-def get_vm_host_map(base_uri, path)
+def get_mappings(base_uri, path)
   rest_return = RestClient::Request.execute(method: :get,
                                             url: base_uri + path,
                                             :headers => {:accept => :json},
                                             verify_ssl: false)
   result = JSON.parse(rest_return)
-  hosts = hosts_per_cluster(clusters_per_datacenter(datacenters_per_database(result)))
-  vms_per_host(hosts)
-end
-
-def get_ems(base_uri, path)
-  puts "in get_ems"
+  vms_per_host(hosts_per_cluster(clusters_per_datacenter(datacenters_per_database(result))))
 end
 
 def get_folder_paths(base_uri, path)
@@ -343,24 +373,6 @@ def mock_ems
   ems
 end
 
-def mock_host
-  host                      = Host.new
-  host.hostname             = "esx13.v2v.bos.redhat.com"
-  host.ems_ref              = "host-29"
-  host.cpu_cores_per_socket = 4
-  host.cpu_total_cores      = 8
-  host.ems_cluster          = {"ems_ref": "domain-c26"}
-  host
-end
-
-def mock_ems_cluster
-  cluster                     = EmsCluster.new
-  cluster.name                = "V2V_Cluster"
-  cluster.ems_ref             = "domain-c26"
-  cluster.v_parent_datacenter = "V2V-DC"
-  cluster
-end
-
 # ------------ End of Mock methods -------------------
 
 
@@ -368,14 +380,20 @@ end
 
 def extract
   @folder_paths = get_folder_paths(BASE_URI, FOLDERS_PATH)
+  get_mappings(BASE_URI, TOPOLOGY_PATH)
   
   ems = mock_ems
-  vm_host_map = get_vm_host_map(BASE_URI, TOPOLOGY_PATH)
-  ems.hosts << mock_host
-  ems.ems_clusters << mock_ems_cluster
+
+  retrieve(BASE_URI, CLUSTERS_PATH).each do |cluster|
+    ems.ems_clusters << create_cluster(cluster, @cluster_dc_map[cluster['id']])
+  end
   
-  get_vms(BASE_URI, VMS_PATH).each do |vm|
-    ems.vms << create_vm(vm, vm_host_map[vm['id']])
+  retrieve(BASE_URI, HOSTS_PATH).each do |host|
+    ems.hosts << create_host(host, @host_cluster_map[host['id']])
+  end
+
+  retrieve(BASE_URI, VMS_PATH).each do |vm|
+    ems.vms << create_vm(vm, @vm_host_map[vm['id']])
   end
   
   all_vcenters = []
@@ -398,7 +416,6 @@ def extract
 end
 
 namespace '/api/v1' do
-
   before do
     content_type 'application/json'
   end
