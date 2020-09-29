@@ -367,7 +367,7 @@ end
 # ------------- Main ---------------------
 
 def extract
-  $folder_paths = get_folder_paths(BASE_URI, FOLDERS_PATH)
+  @folder_paths = get_folder_paths(BASE_URI, FOLDERS_PATH)
   
   ems = mock_ems
   vm_host_map = get_vm_host_map(BASE_URI, TOPOLOGY_PATH)
@@ -394,9 +394,8 @@ def extract
     "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
   }
   
-  puts payload.to_json
+  payload.to_json
 end
-
 
 namespace '/api/v1' do
 
