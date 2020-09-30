@@ -4,12 +4,13 @@ require 'rest-client'
 require 'sinatra'
 require "sinatra/namespace"
 
-BASE_URI      = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
-VMS_PATH      = "/namespaces/openshift-migration/providers/vsphere/test/vms?detail=1".freeze
-HOSTS_PATH    = "/namespaces/openshift-migration/providers/vsphere/test/hosts?detail=1".freeze
-CLUSTERS_PATH = "/namespaces/openshift-migration/providers/vsphere/test/clusters?detail=1".freeze
-FOLDERS_PATH  = "/namespaces/openshift-migration/providers/vsphere/test/folders".freeze
-TOPOLOGY_PATH = "/namespaces/openshift-migration/providers/vsphere/test/tree/host".freeze
+BASE_URI  = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
+PROVIDERS = "/namespaces/openshift-migration/providers".freeze
+VMS       = "/vms?detail=1".freeze
+HOSTS     = "/hosts?detail=1".freeze
+CLUSTERS  = "/clusters?detail=1".freeze
+FOLDERS   = "/folders".freeze
+TOPOLOGY  = "/tree/host".freeze
 
 # ----------- Class definitions --------------
 
@@ -18,6 +19,8 @@ class MtvBaseObject
     as_json(*options).to_json(*options)
   end
 end
+
+# ----
 
 class Host < MtvBaseObject
   attr_writer :hostname
@@ -44,6 +47,8 @@ class Host < MtvBaseObject
   end
 end
 
+# ----
+
 class EmsCluster < MtvBaseObject
   attr_writer :name
   attr_writer :ems_ref
@@ -63,21 +68,7 @@ class EmsCluster < MtvBaseObject
   end
 end
 
-class VmDisk < MtvBaseObject
-  attr_writer :filename
-  attr_writer :device_type
-  
-  def initialize
-    @device_type = "disk"
-  end
-  
-  def as_json(options={})
-    {
-      device_type: @device_type,
-      filename:    @filename
-    }
-  end
-end
+# ----
 
 class Vm < MtvBaseObject
   attr_accessor :hardware
@@ -174,6 +165,8 @@ class Vm < MtvBaseObject
   end
 end
 
+# ----
+
 class Ems < MtvBaseObject
   attr_writer   :name
   attr_writer   :api_version
@@ -182,10 +175,13 @@ class Ems < MtvBaseObject
   attr_accessor :ems_clusters
   attr_accessor :vms
   
-  def initialize
-    @vms          = []
-    @hosts        = []
-    @ems_clusters = []
+  def initialize(ems)
+    @vms                 = []
+    @hosts               = []
+    @ems_clusters        = []
+    @name                = ems['name']
+    @emstype_description = "VMware vCenter"
+    @api_version         = "6.5"
   end
   
   def as_json(options={})
@@ -203,7 +199,6 @@ end
 # ----------- End of class definitions --------------
 
 # ------------ Create object methods ----------------
-
 
 def create_vm(vm, host_ems_ref)
   folder_path                 = @folder_paths[vm["parent"]["ID"]]
@@ -224,11 +219,15 @@ def create_vm(vm, host_ems_ref)
   new_vm
 end
 
+# ----
+
 def create_host(host, cluster_ems_ref)
   new_host                      = Host.new(host)
   new_host.ems_cluster          = {"ems_ref": "#{cluster_ems_ref}"}
   new_host  
 end
+
+# ----
 
 def create_cluster(cluster, dc_name)
   new_cluster                     = EmsCluster.new(cluster)
@@ -236,8 +235,13 @@ def create_cluster(cluster, dc_name)
   new_cluster
 end
 
-# ------------ End of create object methods ----------------
+# ----
 
+def create_ems(ems)
+  Ems.new(ems)
+end
+
+# ------------ End of create object methods ----------------
 
 # ------------ Utility methods ---------------
 
@@ -251,6 +255,8 @@ def find_folder_path(api_folders, folder)
   path
 end
 
+# ----
+
 def format_disks(disks)
   formatted_disks = []
   disks.each do |disk|
@@ -258,6 +264,8 @@ def format_disks(disks)
   end
   formatted_disks
 end
+
+# ----
 
 def datacenters_per_database(topology)
   datacenters = []
@@ -270,6 +278,8 @@ def datacenters_per_database(topology)
   end
   datacenters
 end
+
+# ----
     
 def clusters_per_datacenter(dcs)
   clusters = []
@@ -288,6 +298,8 @@ def clusters_per_datacenter(dcs)
   end
   clusters
 end
+
+# ----
   
 def hosts_per_cluster(clusters)
   hosts = []
@@ -306,6 +318,8 @@ def hosts_per_cluster(clusters)
   end
   hosts
 end
+
+# ----
 
 def vms_per_host(hosts)
   vms = []
@@ -329,31 +343,42 @@ end
 
 # ------------ Get from API methods --------------
 
-def retrieve(base_uri, path)
+def call_api(base_uri, path)
+  starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   rest_return = RestClient::Request.execute(method: :get,
                                             url: base_uri + path,
                                             :headers => {:accept => :json},
                                             verify_ssl: false)
-  result = JSON.parse(rest_return)
-  result = result.is_a?(Array) ? result : result.nil? ? [] : [result]
+  ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  elapsed = ending - starting
+  puts "API call took #{elapsed} seconds"
+  rest_return
 end
 
+def get_vsphere_providers(base_uri, path)
+  result = JSON.parse(call_api(base_uri, path))
+  result['vsphere'].is_a?(Array) ? result['vsphere'] : result['vsphere'].nil? ? [] : [result['vsphere']]
+end
+
+# ----
+
+def retrieve(base_uri, path)
+  result = JSON.parse(call_api(base_uri, path))
+  result.is_a?(Array) ? result : result.nil? ? [] : [result]
+end
+
+# ----
+
 def get_mappings(base_uri, path)
-  rest_return = RestClient::Request.execute(method: :get,
-                                            url: base_uri + path,
-                                            :headers => {:accept => :json},
-                                            verify_ssl: false)
-  result = JSON.parse(rest_return)
+  result = JSON.parse(call_api(base_uri, path))
   vms_per_host(hosts_per_cluster(clusters_per_datacenter(datacenters_per_database(result))))
 end
 
+# ----
+
 def get_folder_paths(base_uri, path)
   folders = {}
-  rest_return = RestClient::Request.execute(method: :get,
-                                            url: base_uri + path,
-                                            :headers => {:accept => :json},
-                                            verify_ssl: false)
-  api_folders = JSON.parse(rest_return)
+  api_folders = JSON.parse(call_api(base_uri, path))
   api_folders.each do |folder|
     folders[folder['id']] = find_folder_path(api_folders, folder)
   end
@@ -362,42 +387,32 @@ end
 
 # ----------- End of Get methods --------------
 
-
-# ------------ Mock methods -------------------
-
-def mock_ems
-  ems                     = Ems.new
-  ems.name                = "Test VMware"
-  ems.api_version         = "6.5"
-  ems.emstype_description = "VMware vCenter"
-  ems
-end
-
-# ------------ End of Mock methods -------------------
-
-
 # ------------- Main ---------------------
 
 def extract
-  @folder_paths = get_folder_paths(BASE_URI, FOLDERS_PATH)
-  get_mappings(BASE_URI, TOPOLOGY_PATH)
-  
-  ems = mock_ems
+  providers       = get_vsphere_providers(BASE_URI, PROVIDERS)
+  all_vcenters    = []
+  providers.each do |vcenter|
+    ems           = create_ems(vcenter)
+    vc_link       = vcenter['selfLink']
+    @folder_paths = get_folder_paths(BASE_URI, vc_link + FOLDERS)
 
-  retrieve(BASE_URI, CLUSTERS_PATH).each do |cluster|
-    ems.ems_clusters << create_cluster(cluster, @cluster_dc_map[cluster['id']])
-  end
-  
-  retrieve(BASE_URI, HOSTS_PATH).each do |host|
-    ems.hosts << create_host(host, @host_cluster_map[host['id']])
-  end
+    get_mappings(BASE_URI, vc_link + TOPOLOGY)
 
-  retrieve(BASE_URI, VMS_PATH).each do |vm|
-    ems.vms << create_vm(vm, @vm_host_map[vm['id']])
-  end
+    retrieve(BASE_URI, vc_link + CLUSTERS).each do |cluster|
+      ems.ems_clusters << create_cluster(cluster, @cluster_dc_map[cluster['id']])
+    end
+    
+    retrieve(BASE_URI, vc_link + HOSTS).each do |host|
+      ems.hosts << create_host(host, @host_cluster_map[host['id']])
+    end
   
-  all_vcenters = []
-  all_vcenters << ems
+    retrieve(BASE_URI, vc_link + VMS).each do |vm|
+      ems.vms << create_vm(vm, @vm_host_map[vm['id']])
+    end
+
+    all_vcenters << ems
+  end
   
   payload = {
     "data_collected_on": "#{Time.now.utc}",
@@ -411,9 +426,10 @@ def extract
     },
     "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
   }
-  
   payload.to_json
 end
+
+# ----
 
 namespace '/api/v1' do
   before do
