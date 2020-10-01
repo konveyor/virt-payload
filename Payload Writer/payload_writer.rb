@@ -3,6 +3,8 @@ require 'date'
 require 'rest-client'
 require 'sinatra'
 require "sinatra/namespace"
+require "tempfile"
+require 'rubygems/package'
 
 BASE_URI  = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
 PROVIDERS = "/namespaces/openshift-migration/providers".freeze
@@ -338,6 +340,34 @@ def vms_per_host(hosts)
   end
 end
 
+# ----
+
+def package(payload, tempdir = nil, perm = nil)
+  file = Tempfile.create(["mtv_inventory-", ".tar.gz"], tempdir)
+  file.binmode
+
+  targz(payload, file)
+
+  file.close
+
+  path = Pathname.new(file.path)
+  FileUtils.chmod(perm, [path]) if perm
+
+  path 
+end
+
+# ----
+
+def targz(file, io = StringIO.new)
+  Zlib::GzipWriter.wrap(io) do |gz|
+    Gem::Package::TarWriter.new(gz) do |tar|
+      tar.add_file_simple("mtv_inventory.json", 0o0444, file.bytesize) do |tar_file|
+        tar_file.write(file)
+      end
+    end
+  end
+end
+
 # ------------ End of utility methods ----------------
 
 
@@ -426,7 +456,8 @@ def extract
     },
     "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
   }
-  payload.to_json
+  tgzfile = package(payload.to_json)
+  puts "temp file is #{tgzfile}"
 end
 
 # ----
