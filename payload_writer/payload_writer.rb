@@ -96,6 +96,7 @@ class Vm < MtvBaseObject
   attr_writer   :has_usb_controller
   attr_writer   :has_vm_affinity_config
   attr_writer   :has_vm_drs_config
+  attr_writer   :has_vm_ft_config
   attr_writer   :has_vm_ha_config
   attr_writer   :host
   attr_writer   :id
@@ -129,6 +130,7 @@ class Vm < MtvBaseObject
     @has_usb_controller               = false
     @has_vm_affinity_config           = false
     @has_vm_drs_config                = false
+    @has_vm_ft_config                 = false
     @has_vm_ha_config                 = false
     @host                             = ""
     @id                               = vm['uuid']
@@ -170,6 +172,7 @@ class Vm < MtvBaseObject
       has_usb_controller:     @has_usb_controller,
       has_vm_affinity_config: @has_vm_affinity_config,
       has_vm_drs_config:      @has_vm_drs_config,
+      has_vm_ft_config:       @has_vm_ft_config,
       has_vm_ha_config:       @has_vm_ha_config,
       host:                   @host,
       memory_hot_add_enabled: @memory_hot_add_enabled,
