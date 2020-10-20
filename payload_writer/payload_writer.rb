@@ -7,6 +7,8 @@ require "sinatra/streaming"
 require "tempfile"
 require 'rubygems/package'
 require 'objspace'
+require 'pathname'
+require 'memory_profiler'
 
 BASE_URI  = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
 PROVIDERS = "/namespaces/openshift-migration/providers".freeze
@@ -88,6 +90,7 @@ class Vm < MtvBaseObject
   attr_writer   :ems_ref
   attr_writer   :firmware
   attr_writer   :folder_path
+  attr_writer   :has_cluster_dpm_config
   attr_writer   :has_encrypted_disk
   attr_writer   :has_opaque_network
   attr_writer   :has_passthrough_device
@@ -122,6 +125,7 @@ class Vm < MtvBaseObject
     @ems_ref                          = vm['id']
     @firmware                         = vm['firmware']
     @folder_path                      = ""
+    @has_cluster_dpm_config           = false
     @has_encrypted_disk               = false
     @has_opaque_network               = false
     @has_passthrough_device           = false
@@ -164,6 +168,7 @@ class Vm < MtvBaseObject
       ems_ref:                @ems_ref,
       firmware:               @firmware,
       folder_path:            @folder_path,
+      has_cluster_dpm_config: @has_cluster_dpm_config,
       has_encrypted_disk:     @has_encrypted_disk,
       has_opaque_network:     @has_opaque_network,
       has_passthrough_device: @has_passthrough_device,
@@ -449,6 +454,29 @@ def get_folder_paths(base_uri, path)
   folders
 end
 
+# ----
+
+def process_vc(vcenter)
+  ems           = create_ems(vcenter)
+  vc_link       = vcenter['selfLink']
+  @folder_paths = get_folder_paths(BASE_URI, vc_link + FOLDERS)
+
+  get_mappings(BASE_URI, vc_link + TOPOLOGY)
+
+  retrieve(BASE_URI, vc_link + CLUSTERS).each do |cluster|
+    ems.ems_clusters << create_cluster(cluster, @cluster_dc_map[cluster['id']])
+  end
+  
+  retrieve(BASE_URI, vc_link + HOSTS).each do |host|
+    ems.hosts << create_host(host, @host_cluster_map[host['id']])
+  end
+
+  retrieve(BASE_URI, vc_link + VMS).each.with_index(1) do |vm, id|
+    ems.vms << create_vm(vm, id, @vm_host_map[vm['id']])
+  end
+  ems
+end
+
 # ----------- End of Get methods --------------
 
 # ------------- Main ---------------------
@@ -457,25 +485,13 @@ def extract
   providers       = get_vsphere_providers(BASE_URI, PROVIDERS)
   all_vcenters    = []
   providers.each do |vcenter|
-    ems           = create_ems(vcenter)
-    vc_link       = vcenter['selfLink']
-    @folder_paths = get_folder_paths(BASE_URI, vc_link + FOLDERS)
-
-    get_mappings(BASE_URI, vc_link + TOPOLOGY)
-
-    retrieve(BASE_URI, vc_link + CLUSTERS).each do |cluster|
-      ems.ems_clusters << create_cluster(cluster, @cluster_dc_map[cluster['id']])
+    begin
+      all_vcenters << process_vc(vcenter)
+    rescue RestClient::Exception => err
+      puts "The API request to the inventory database failed with code: #{err.response.code}" unless err.response.nil?
+      puts "The response body was:\n#{err.response.body.inspect}" unless err.response.nil?
+      next
     end
-    
-    retrieve(BASE_URI, vc_link + HOSTS).each do |host|
-      ems.hosts << create_host(host, @host_cluster_map[host['id']])
-    end
-  
-    retrieve(BASE_URI, vc_link + VMS).each.with_index(1) do |vm, id|
-      ems.vms << create_vm(vm, id, @vm_host_map[vm['id']])
-    end
-
-    all_vcenters << ems
   end
   
   payload = {
@@ -490,9 +506,12 @@ def extract
     },
     "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
   }
-  puts "Payload object size is: #{ObjectSpace.memsize_of(all_vcenters)/1024} KiB" if $debug
-  tgzfile = package(payload.to_json)
+  tgzfile = ""
+  report = MemoryProfiler.report do
+    tgzfile = package(payload.to_json)
+  end
   puts "temp file is #{tgzfile}" if $debug
+  report.pretty_print
   tgzfile
 end
 
@@ -506,9 +525,6 @@ namespace '/api/v1' do
   get '/extract' do
     begin
       send_file extract, :disposition => :attachment, :filename => 'mtv_payload.tar.gz'
-    rescue RestClient::Exception => err
-      puts "The API request to the inventory database failed with code: #{err.response.code}" unless err.response.nil?
-      puts "The response body was:\n#{err.response.body.inspect}" unless err.response.nil?
     rescue => err
       puts "Error: [#{err}]"
     end
