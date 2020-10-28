@@ -8,10 +8,9 @@ require "tempfile"
 require 'rubygems/package'
 require 'objspace'
 require 'pathname'
-require 'memory_profiler'
+#require 'memory_profiler'
 
-BASE_URI  = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
-PROVIDERS = "/namespaces/openshift-migration/providers".freeze
+TEST_URI  = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
 VMS       = "/vms?detail=1".freeze
 HOSTS     = "/hosts?detail=1".freeze
 CLUSTERS  = "/clusters?detail=1".freeze
@@ -518,15 +517,26 @@ def extract
     "ManageIQ::Providers::Vmware::InfraManager": all_vcenters
   }
   tgzfile = ""
-  report = MemoryProfiler.report do
-    tgzfile = package(payload.to_json)
-  end
+  #report = MemoryProfiler.report do
+  tgzfile = package(payload.to_json)
+  #end
   puts "temp file is #{tgzfile}" if $debug
-  report.pretty_print
+  #report.pretty_print
   tgzfile
 end
 
 # ----
+
+if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+  ns_file = File.open("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+  openshift_namespace = ns_file.read
+  ns_file.close
+  BASE_URI  = "https://inventory".freeze
+  PROVIDERS = "/namespaces/#{openshift_namespace}/providers".freeze
+else
+  BASE_URI  = TEST_URI
+  PROVIDERS = "/namespaces/openshift-migration/providers".freeze
+end
 
 namespace '/api/v1' do
   before do
