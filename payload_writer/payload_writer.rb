@@ -242,6 +242,7 @@ def create_vm(vm, id, host_ems_ref)
   end
   
   new_vm.hardware['disks'] = format_disks(vm['disks'])
+  new_vm.used_disk_storage = disk_capacity(vm['disks'])
   new_vm
 end
 
@@ -289,6 +290,16 @@ def format_disks(disks)
     formatted_disks << { "device_type": "disk", "filename": disk["file"] }
   end
   formatted_disks
+end
+
+# ----
+
+def disk_capacity(disks)
+  total_capacity = 0
+  disks.each do |disk|
+    total_capacity += disk["capacity"]
+  end
+  total_capacity
 end
 
 # ----
