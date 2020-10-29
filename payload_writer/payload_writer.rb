@@ -10,12 +10,13 @@ require 'objspace'
 require 'pathname'
 #require 'memory_profiler'
 
-TEST_URI  = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
-VMS       = "/vms?detail=1".freeze
-HOSTS     = "/hosts?detail=1".freeze
-CLUSTERS  = "/clusters?detail=1".freeze
-FOLDERS   = "/folders".freeze
-TOPOLOGY  = "/tree/host".freeze
+TEST_URI       = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
+TEST_PROVIDERS = "/namespaces/openshift-migration/providers".freeze
+VMS            = "/vms?detail=1".freeze
+HOSTS          = "/hosts?detail=1".freeze
+CLUSTERS       = "/clusters?detail=1".freeze
+FOLDERS        = "/folders".freeze
+TOPOLOGY       = "/tree/host".freeze
 
 $debug    = true
 
@@ -535,7 +536,7 @@ if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
   PROVIDERS = "/namespaces/#{openshift_namespace}/providers".freeze
 else
   BASE_URI  = TEST_URI
-  PROVIDERS = "/namespaces/openshift-migration/providers".freeze
+  PROVIDERS = TEST_PROVIDERS
 end
 
 set :port, 8080
