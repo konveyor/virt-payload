@@ -538,6 +538,7 @@ else
   PROVIDERS = "/namespaces/openshift-migration/providers".freeze
 end
 
+set :port, 8080
 namespace '/api/v1' do
   before do
     content_type 'application/json'
