@@ -18,7 +18,9 @@ CLUSTERS       = "/clusters?detail=1".freeze
 FOLDERS        = "/folders".freeze
 TOPOLOGY       = "/tree/host".freeze
 
-$debug    = true
+$debug         = true
+$clusters      = {}
+
 
 # ----------- Class definitions --------------
 
@@ -63,8 +65,10 @@ class EmsCluster < MtvBaseObject
   attr_writer :v_parent_datacenter
   
   def initialize(cluster)
-    @name    = cluster['name']
-    @ems_ref = cluster['id']
+    @name                = cluster['name']
+    @ems_ref             = cluster['id']
+    $cluster_drs_enabled = cluster['drsEnabled']
+    $cluster_das_enabled = cluster['dasEnabled']
   end
   
   def as_json(options={})
@@ -112,9 +116,9 @@ class Vm < MtvBaseObject
   
   def initialize(vm)
     @hardware                         = {}
-    @hardware['disks']                = []
+    @hardware['disks']                = []      # set in create_vm
     @hardware['guest_os_full_name']   = vm['guestName']
-    @operating_system                 = {}
+    @operating_system                 = {}      # set in create_vm
     @operating_system['product_name'] = vm['guestName']    
     @ballooned_memory                 = vm['balloonedMemory']
     @cpu_affinity                     = to_string(vm['cpuAffinity'])
@@ -124,26 +128,26 @@ class Vm < MtvBaseObject
     @cpu_total_cores                  = vm['cpuCount']
     @ems_ref                          = vm['id']
     @firmware                         = vm['firmware']
-    @folder_path                      = ""
-    @has_cluster_dpm_config           = false
-    @has_encrypted_disk               = false
+    @folder_path                      = ""      # set in create_vm
+    @has_cluster_dpm_config           = false   # set in create_vm from cluster attribute
+    @has_encrypted_disk               = false   # hard-code as this for now until we can detect it in vCenter
     @has_opaque_network               = false
     @has_passthrough_device           = false
     @has_rdm_disk                     = false
-    @has_sriov_nic                    = false
+    @has_sriov_nic                    = vm['sriovSupported']
     @has_usb_controller               = false
-    @has_vm_affinity_config           = false
-    @has_vm_drs_config                = false
+    @has_vm_affinity_config           = false   # set in create_vm from cluster attribute
+    @has_vm_drs_config                = false   # set in create_vm from cluster attribute
     @has_vm_ft_config                 = false
-    @has_vm_ha_config                 = false
-    @host                             = ""
+    @has_vm_ha_config                 = false   # set in create_vm from cluster attribute
+    @host                             = ""      # set in create_vm
     @id                               = vm['uuid']
     @memory_hot_add_enabled           = vm['memoryHotAddEnabled']
     @name                             = vm['name']
     @numa_node_affinity               = nil
     @ram_size_in_bytes                = vm['memoryMB'] * 1048576
     @retired                          = nil
-    @used_disk_storage                = 0
+    @used_disk_storage                = 0       # set in create_vm
   end
    
   def to_string(list)
@@ -226,8 +230,9 @@ end
 
 # ------------ Create object methods ----------------
 
-def create_vm(vm, id, host_ems_ref)
+def create_vm(vm, id, host_ems_ref, clusters)
   folder_path                 = @folder_paths[vm["parent"]["ID"]]
+  cluster                     = clusters[@host_cluster_map[host_ems_ref]]
   new_vm                      = Vm.new(vm)
   new_vm.id                   = id
   new_vm.host                 = {"ems_ref" => "#{host_ems_ref}"}
@@ -240,6 +245,13 @@ def create_vm(vm, id, host_ems_ref)
   else
     new_vm.operating_system['product_type'] = "Unknown"
   end
+  
+  # Propagate cluster-related attributes as VM boolean flags
+  
+  new_vm.has_vm_drs_config = cluster['drsEnabled']
+  new_vm.has_vm_ha_config  = cluster['dasEnabled']
+  #new_vm.has_cluster_dpm_config  = cluster['']
+  #new_vm.has_vm_affinity_config  = cluster['']
   
   new_vm.hardware['disks'] = format_disks(vm['disks'])
   new_vm.used_disk_storage = disk_capacity(vm['disks'])
@@ -427,7 +439,7 @@ def call_api(base_uri, path)
                                             verify_ssl: false)
   ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   elapsed = ending - starting
-  puts "API call took #{elapsed} seconds"
+  puts "API call took #{elapsed} seconds" if $debug
   rest_return
 end
 
@@ -468,6 +480,7 @@ end
 # ----
 
 def process_vc(vcenter)
+  clusters      = {}
   ems           = create_ems(vcenter)
   vc_link       = vcenter['selfLink']
   @folder_paths = get_folder_paths(BASE_URI, vc_link + FOLDERS)
@@ -475,6 +488,7 @@ def process_vc(vcenter)
   get_mappings(BASE_URI, vc_link + TOPOLOGY)
 
   retrieve(BASE_URI, vc_link + CLUSTERS).each do |cluster|
+    clusters[cluster['id']] = cluster
     ems.ems_clusters << create_cluster(cluster, @cluster_dc_map[cluster['id']])
   end
   
@@ -483,7 +497,7 @@ def process_vc(vcenter)
   end
 
   retrieve(BASE_URI, vc_link + VMS).each.with_index(1) do |vm, id|
-    ems.vms << create_vm(vm, id, @vm_host_map[vm['id']])
+    ems.vms << create_vm(vm, id, @vm_host_map[vm['id']], clusters)
   end
   ems
 end
