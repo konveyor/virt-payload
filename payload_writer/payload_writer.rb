@@ -19,8 +19,6 @@ FOLDERS        = "/folders".freeze
 TOPOLOGY       = "/tree/host".freeze
 
 $debug         = true
-$clusters      = {}
-
 
 # ----------- Class definitions --------------
 
@@ -67,8 +65,6 @@ class EmsCluster < MtvBaseObject
   def initialize(cluster)
     @name                = cluster['name']
     @ems_ref             = cluster['id']
-    $cluster_drs_enabled = cluster['drsEnabled']
-    $cluster_das_enabled = cluster['dasEnabled']
   end
   
   def as_json(options={})
