@@ -97,7 +97,7 @@ class Vm < MtvBaseObject
     @operating_system['product_name'] = vm['guestName']    
     @ballooned_memory                 = vm['balloonedMemory']
     @cpu_affinity                     = to_string(vm['cpuAffinity'])
-    @cpu_cores_per_socket             = 1
+    @cpu_cores_per_socket             = vm['coresPerSocket']
     @cpu_hot_add_enabled              = vm['cpuHostAddEnabled']
     @cpu_hot_remove_enabled           = vm['cpuHostRemoveEnabled']
     @cpu_total_cores                  = vm['cpuCount']
@@ -122,7 +122,7 @@ class Vm < MtvBaseObject
     @name                             = vm['name']
     @numa_node_affinity               = nil
     @ram_size_in_bytes                = vm['memoryMB'] * 1048576
-    @retired                          = nil
+    @retired                          = nil   # hard-code as this for compatibility with Migration Analytics v1
     @used_disk_storage                = vm['storageUsed']
   end
    
