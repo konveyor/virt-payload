@@ -3,7 +3,6 @@ require 'sinatra'
 require "sinatra/namespace"
 require "sinatra/streaming"
 
-
 require_relative 'classes'
 require_relative 'utils'
 require_relative 'api_methods'
