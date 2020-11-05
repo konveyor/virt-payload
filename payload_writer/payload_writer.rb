@@ -17,6 +17,7 @@ FOLDERS        = "/folders".freeze
 TOPOLOGY       = "/tree/host".freeze
 
 $debug         = true
+$stdout.sync   = true
 
 # ----
 
