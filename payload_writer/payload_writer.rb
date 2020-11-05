@@ -18,6 +18,7 @@ TOPOLOGY       = "/tree/host".freeze
 
 $debug         = true
 
+
 # ----
 
 def process_vc(vcenter)
