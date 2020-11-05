@@ -18,7 +18,6 @@ TOPOLOGY       = "/tree/host".freeze
 
 $debug         = true
 
-
 # ----
 
 def process_vc(vcenter)
@@ -103,6 +102,8 @@ else
 end
 
 set :port, 8080
+set :bind, '0.0.0.0'
+
 namespace '/api/v1' do
   before do
     content_type 'application/json'
