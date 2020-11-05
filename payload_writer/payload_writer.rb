@@ -95,7 +95,7 @@ if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
   ns_file = File.open("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
   openshift_namespace = ns_file.read.chomp
   ns_file.close
-  BASE_URI  = "https://inventory".freeze
+  BASE_URI  = "http://inventory".freeze
   PROVIDERS = "/namespaces/#{openshift_namespace}/providers".freeze
 else
   BASE_URI  = TEST_URI
