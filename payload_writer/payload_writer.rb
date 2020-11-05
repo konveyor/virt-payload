@@ -46,7 +46,7 @@ end
 # ----
 
 def extract(provider_list)
-  puts "Requested providers: #{provider_list.inspect}" if $debug
+  puts "Requested providers: #{provider_list.inspect}" 
   providers       = get_vsphere_providers(BASE_URI, PROVIDERS)
   all_vcenters    = []
   providers.each do |vcenter|
