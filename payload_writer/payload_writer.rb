@@ -16,7 +16,7 @@ CLUSTERS       = "/clusters?detail=1".freeze
 FOLDERS        = "/folders".freeze
 TOPOLOGY       = "/tree/host".freeze
 
-$debug         = false
+$debug         = true
 
 # ----
 
@@ -92,7 +92,7 @@ end
 
 if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
   ns_file = File.open("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-  openshift_namespace = ns_file.read
+  openshift_namespace = ns_file.read.chomp
   ns_file.close
   BASE_URI  = "https://inventory".freeze
   PROVIDERS = "/namespaces/#{openshift_namespace}/providers".freeze
