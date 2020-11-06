@@ -18,8 +18,8 @@ class Host < MtvBaseObject
   def initialize(host)
     @hostname             = host['name']
     @ems_ref              = host['id']
-    @cpu_total_cores      = host['cpuCores']
-    @cpu_cores_per_socket = host['cpuCores'] / host['cpuSockets']
+    @cpu_total_cores      = host['cpuCores'].nil? ? 1 : host['cpuCores']
+    @cpu_cores_per_socket = host['cpuCores'] / host['cpuSockets'] rescue 1
   end
   
   def as_json(options={})

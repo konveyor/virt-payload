@@ -106,10 +106,6 @@ set :port, 8080
 set :bind, '0.0.0.0'
 
 namespace '/api/v1' do
-  #before do
-  #  content_type 'application/json'
-  #end
-
   get '/extract' do
     begin
       raise "Must include a '?providers=provider1,provider2,...' parameter list" if request.fullpath.split('?')[1].nil?
