@@ -106,9 +106,9 @@ set :port, 8080
 set :bind, '0.0.0.0'
 
 namespace '/api/v1' do
-  before do
-    content_type 'application/json'
-  end
+  #before do
+  #  content_type 'application/json'
+  #end
 
   get '/extract' do
     begin
