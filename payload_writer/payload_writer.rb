@@ -101,6 +101,7 @@ else
   PROVIDERS = TEST_PROVIDERS
 end
 
+set :bind, '0.0.0.0'
 set :port, 8080
 namespace '/api/v1' do
   before do
