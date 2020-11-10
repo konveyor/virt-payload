@@ -14,6 +14,8 @@ VMS            = "/vms?detail=1".freeze
 HOSTS          = "/hosts?detail=1".freeze
 CLUSTERS       = "/clusters?detail=1".freeze
 FOLDERS        = "/folders".freeze
+PROVIDERS      = "/providers".freeze
+NAMESPACES     = "/namespaces".freeze
 TOPOLOGY       = "/tree/host".freeze
 
 $debug         = true
@@ -47,17 +49,19 @@ end
 # ----
 
 def extract(provider_list)
-  puts "Requested providers: #{provider_list.inspect}" 
-  providers       = get_vsphere_providers(BASE_URI, PROVIDERS)
-  all_vcenters    = []
-  providers.each do |vcenter|
-    next unless provider_list.include?(vcenter['name'])
-    begin
-      all_vcenters << process_vc(vcenter)
-    rescue RestClient::Exception => err
-      puts "The API request to the inventory database failed with code: #{err.response.code}" unless err.response.nil?
-      puts "The response body was:\n#{err.response.body.inspect}" unless err.response.nil?
-      next
+  puts "Requested providers: #{provider_list.inspect}"
+  get_namespaces(BASE_URI, NAMESPACES).each do |namespace|
+    providers = get_vsphere_providers(BASE_URI, namespace, PROVIDERS)
+    all_vcenters = []
+    providers.each do |vcenter|
+      next unless provider_list.include?("#{namespace}/#{vcenter['name']}")
+      begin
+        all_vcenters << process_vc(vcenter)
+      rescue RestClient::Exception => err
+        puts "The API request to the inventory database failed with code: #{err.response.code}" unless err.response.nil?
+        puts "The response body was:\n#{err.response.body.inspect}" unless err.response.nil?
+        next
+      end
     end
   end
   
@@ -92,14 +96,10 @@ end
 # ------------- Main ---------------------
 
 if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-  ns_file = File.open("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-  openshift_namespace = ns_file.read.chomp
-  ns_file.close
+  # Running in OpenShift
   BASE_URI  = "http://inventory".freeze
-  PROVIDERS = "/namespaces/#{openshift_namespace}/providers".freeze
 else
   BASE_URI  = TEST_URI
-  PROVIDERS = TEST_PROVIDERS
 end
 
 set :port, 8080
@@ -108,7 +108,7 @@ set :bind, '0.0.0.0'
 namespace '/api/v1' do
   get '/extract' do
     begin
-      raise "Must include a '?providers=provider1,provider2,...' parameter list" if request.fullpath.split('?')[1].nil?
+      raise "Must include a '?providers=namespace1/provider1,namespace2/provider2,...' parameter list" if request.fullpath.split('?')[1].nil?
       provider_list = request.fullpath.split('?')[1].split('providers=')[1].split(',')
       send_file extract(provider_list), :disposition => :attachment, :filename => 'mtv_payload.tar.gz'
     rescue => err
