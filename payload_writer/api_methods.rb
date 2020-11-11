@@ -29,7 +29,7 @@ end
 # ----
 
 def get_vsphere_providers(base_uri, namespace, path)
-  puts "In get_vsphere_providers, path: #{path}" if $debug
+  puts "In get_vsphere_providers, namespace/path: #{namespace}#{path}" if $debug
   result = JSON.parse(call_api(base_uri, "/#{namespace}#{path}"))
   result['vsphere'].is_a?(Array) ? result['vsphere'] : result['vsphere'].nil? ? [] : [result['vsphere']]
 end
