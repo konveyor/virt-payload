@@ -20,7 +20,7 @@ def get_namespaces(base_uri, path)
   puts "In get_namespaces, path: #{path}" if $debug
   result = JSON.parse(call_api(base_uri, path))
   puts "#{result.inspect}"
-  return result.map { |n| n[:name] }
+  result.map { |n| n["name"] }
 end
 
 # ----
