@@ -25,6 +25,7 @@ def create_vm(vm, id, host_ems_ref, clusters)
   
   new_vm.hardware['disks'] = disks(vm['disks'])
   new_vm.has_shared_disk   = shared_disk(vm['disks'])
+  new_vm.has_rdm_disk      = rdm_disk(vm['disks'])
   new_vm
 end
 
