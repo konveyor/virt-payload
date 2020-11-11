@@ -52,8 +52,8 @@ def extract(provider_list)
   puts "Requested providers: #{provider_list.inspect}"
   all_vcenters = []
   get_namespaces(BASE_URI, NAMESPACES).each do |namespace|
-    providers = get_vsphere_providers(BASE_URI, namespace, PROVIDERS)
-    providers.each do |vcenter|
+    get_vsphere_providers(BASE_URI, namespace, PROVIDERS).each do |vcenter|
+      puts "Considering: #{namespace}/#{vcenter['name']}"
       next unless provider_list.include?("#{namespace}/#{vcenter['name']}")
       begin
         all_vcenters << process_vc(vcenter)
