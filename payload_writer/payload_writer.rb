@@ -13,8 +13,8 @@ TEST_PROVIDERS = "/namespaces/openshift-migration/providers".freeze
 VMS            = "/vms?detail=1".freeze
 HOSTS          = "/hosts?detail=1".freeze
 CLUSTERS       = "/clusters?detail=1".freeze
+PROVIDERS      = "/providers?detail=1".freeze
 FOLDERS        = "/folders".freeze
-PROVIDERS      = "/providers".freeze
 NAMESPACES     = "/namespaces".freeze
 TOPOLOGY       = "/tree/host".freeze
 
