@@ -103,7 +103,6 @@ end
 
 set :bind, '0.0.0.0'
 set :port, 8080
-set :bind, '0.0.0.0'
 
 namespace '/api/v1' do
   get '/extract' do
