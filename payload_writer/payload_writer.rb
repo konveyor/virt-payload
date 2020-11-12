@@ -8,8 +8,7 @@ require_relative 'utils'
 require_relative 'api_methods'
 require_relative 'create_methods'
 
-TEST_URI       = "https://inventory-openshift-migration.apps.cluster-jortel.v2v.bos.redhat.com".freeze
-TEST_PROVIDERS = "/namespaces/openshift-migration/providers".freeze
+TEST_URI       = "https://inventory-openshift-migration.apps.cluster-pmcgow.v2v.bos.redhat.com".freeze
 VMS            = "/vms?detail=1".freeze
 HOSTS          = "/hosts?detail=1".freeze
 CLUSTERS       = "/clusters?detail=1".freeze

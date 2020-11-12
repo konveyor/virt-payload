@@ -8,7 +8,7 @@ def create_vm(vm, id, host_ems_ref, clusters)
   new_vm.host                 = {"ems_ref" => "#{host_ems_ref}"}
   new_vm.folder_path          = folder_path unless folder_path == "vm"
   
-  if /Linux/ =~ new_vm.operating_system['product_name']
+  if /Linux|CentOS|Ubuntu|Debian|SUSE|SuSE|Fedora/ =~ new_vm.operating_system['product_name']
     new_vm.operating_system['product_type'] = "Linux"
   elsif /Microsoft Windows Server/ =~ new_vm.operating_system['product_name']
     new_vm.operating_system['product_type'] = "ServerNT"
