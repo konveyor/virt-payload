@@ -1,7 +1,7 @@
 # ------------ Create object methods ----------------
 
 def create_vm(vm, id, host_ems_ref, clusters)
-  folder_path                 = @folder_paths[vm["parent"]["ID"]]
+  folder_path                 = @folder_paths[vm["parent"]["id"]]
   cluster                     = clusters[@host_cluster_map[host_ems_ref]]
   new_vm                      = Vm.new(vm)
   new_vm.id                   = id
