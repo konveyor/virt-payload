@@ -31,6 +31,12 @@ end
 
 # ----
 
+def rdm_disk(disks)
+  !disks.select { |disk| disk["rdm"] == true }.empty?
+end
+
+# ----
+
 def datacenters_per_database(topology)
   datacenters = []
   if topology["kind"] == ""

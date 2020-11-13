@@ -107,11 +107,11 @@ class Vm < MtvBaseObject
     @has_cluster_dpm_config           = false   # set in create_vm from cluster attribute
     @has_encrypted_disk               = false   # hard-code as this for now until we can detect it in vCenter
     @has_opaque_network               = false
-    @has_passthrough_device           = false
-    @has_rdm_disk                     = false
+    @has_passthrough_device           = vm['passthroughSupported']
+    @has_rdm_disk                     = false   # set in create_vm
     @has_shared_disk                  = false   # set in create_vm
     @has_sriov_nic                    = vm['sriovSupported']
-    @has_usb_controller               = false
+    @has_usb_controller               = vm['usbSupported']
     @has_vm_affinity_config           = false   # set in create_vm from cluster attribute
     @has_vm_drs_config                = false   # set in create_vm from cluster attribute
     @has_vm_ft_config                 = vm['faultToleranceEnabled']
@@ -120,7 +120,7 @@ class Vm < MtvBaseObject
     @id                               = vm['uuid']
     @memory_hot_add_enabled           = vm['memoryHotAddEnabled']
     @name                             = vm['name']
-    @numa_node_affinity               = nil
+    @numa_node_affinity               = to_string(vm['numaNodeAffinity'])
     @ram_size_in_bytes                = vm['memoryMB'] * 1048576
     @retired                          = nil   # hard-code as this for compatibility with Migration Analytics v1
     @used_disk_storage                = vm['storageUsed']
@@ -187,8 +187,8 @@ class Ems < MtvBaseObject
     @hosts               = []
     @ems_clusters        = []
     @name                = ems['name']
-    @emstype_description = "VMware vCenter"
-    @api_version         = "6.5"
+    @emstype_description = ems['product']
+    @api_version         = ems['apiVersion']
   end
   
   def as_json(options={})

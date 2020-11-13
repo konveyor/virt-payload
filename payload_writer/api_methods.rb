@@ -14,9 +14,19 @@ def call_api(base_uri, path)
   rest_return
 end
 
-def get_vsphere_providers(base_uri, path)
-  puts "In get_vsphere_providers, path: #{path}" if $debug
+# ----
+
+def get_namespaces(base_uri, path)
+  puts "In get_namespaces, path: #{path}" if $debug
   result = JSON.parse(call_api(base_uri, path))
+  result.map { |n| n["name"] }
+end
+
+# ----
+
+def get_vsphere_providers(base_uri, namespace, path)
+  puts "In get_vsphere_providers, namespace/path: #{namespace}#{path}" if $debug
+  result = JSON.parse(call_api(base_uri, "/#{namespace}#{path}"))
   result['vsphere'].is_a?(Array) ? result['vsphere'] : result['vsphere'].nil? ? [] : [result['vsphere']]
 end
 
