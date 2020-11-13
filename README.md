@@ -4,4 +4,6 @@ Generates a tar.gz payload file that can be uploaded to Xavier/Migration Analyti
 
 Call with a list of provider names to include in the payload file, for example:
 
-http://address_or_service:8080/api/v1/extract?providers=test1,test2
+
+http://address_or_service:8080/api/v1/extract?providers=this_namespace/test1,that_namespace/test2
+
