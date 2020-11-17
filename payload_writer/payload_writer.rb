@@ -8,7 +8,7 @@ require_relative 'utils'
 require_relative 'api_methods'
 require_relative 'create_methods'
 
-TEST_URI       = "https://inventory-openshift-migration.apps.cluster-pmcgow.v2v.bos.redhat.com".freeze
+BASE_URI       = "http://inventory".freeze
 VMS            = "/vms?detail=1".freeze
 HOSTS          = "/hosts?detail=1".freeze
 CLUSTERS       = "/clusters?detail=1".freeze
@@ -48,11 +48,11 @@ end
 # ----
 
 def extract(provider_list)
-  puts "Requested providers: #{provider_list.inspect}"
+  puts "Requested providers: #{provider_list.inspect}" if $debug
   all_vcenters = []
   get_namespaces(BASE_URI, NAMESPACES).each do |namespace|
     get_vsphere_providers(BASE_URI + "/namespaces", namespace, PROVIDERS).each do |vcenter|
-      puts "Considering: #{namespace}/#{vcenter['name']}"
+      puts "Considering: #{namespace}/#{vcenter['name']}" if $debug
       next unless provider_list.include?("#{namespace}/#{vcenter['name']}")
       begin
         all_vcenters << process_vc(vcenter)
@@ -93,13 +93,6 @@ end
 # ----
 
 # ------------- Main ---------------------
-
-if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-  # Running in OpenShift
-  BASE_URI  = "http://inventory".freeze
-else
-  BASE_URI  = TEST_URI
-end
 
 set :bind, '0.0.0.0'
 set :port, 8080

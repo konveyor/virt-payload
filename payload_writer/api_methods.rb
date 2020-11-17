@@ -7,6 +7,7 @@ def call_api(base_uri, path)
   rest_return = RestClient::Request.execute(method: :get,
                                             url: base_uri + path,
                                             :headers => {:accept => :json},
+                                            # ssl_ca_file: '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt')
                                             verify_ssl: false)
   ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   elapsed = ending - starting
