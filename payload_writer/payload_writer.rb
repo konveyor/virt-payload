@@ -3,6 +3,7 @@ require 'sinatra'
 require "sinatra/namespace"
 require "sinatra/streaming"
 
+require_relative "sinatra_ssl"
 require_relative 'classes'
 require_relative 'utils'
 require_relative 'api_methods'
@@ -105,7 +106,15 @@ else
 end
 
 set :bind, '0.0.0.0'
-set :port, 8080
+
+if ENV['API_TLS_CERTIFICATE'].nil? or ENV['API_TLS_KEY'].nil?
+  set :port, 8080
+else
+  set :ssl_enabled, true
+  set :ssl_certificate, ENV['API_TLS_CERTIFICATE']
+  set :ssl_key, ENV['API_TLS_KEY']
+  set :port, 8443
+end
 
 namespace '/api/v1' do
   get '/extract' do
