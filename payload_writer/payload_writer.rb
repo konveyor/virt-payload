@@ -17,6 +17,8 @@ FOLDERS        = "/folders".freeze
 NAMESPACES     = "/namespaces".freeze
 TOPOLOGY       = "/tree/host".freeze
 
+K8S_SECRET     = "/var/run/secrets/kubernetes.io/serviceaccount".freeze
+
 $debug         = true
 $stdout.sync   = true
 
@@ -94,9 +96,10 @@ end
 
 # ------------- Main ---------------------
 
-if FileTest.exist?("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+if FileTest.exist?(K8S_SECRET)
   # Running in OpenShift
-  BASE_URI  = "http://inventory".freeze
+  k8s_ns    = File.open("#{K8S_SECRET}/namespace").read
+  BASE_URI  = "https://inventory.#{k8s_ns}.svc.cluster.local:8443".freeze
 else
   BASE_URI  = TEST_URI
 end
