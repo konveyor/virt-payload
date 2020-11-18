@@ -97,7 +97,7 @@ end
 
 # ------------- Main ---------------------
 
-k8s_ns    = File.open("#{K8S_SECRET}/namespace").read
+k8s_ns    = File.open("#{K8S_SECRET}/namespace").read.chomp
 BASE_URI  = "https://inventory.#{k8s_ns}.svc.cluster.local:8443".freeze
 
 set :bind, '0.0.0.0'
