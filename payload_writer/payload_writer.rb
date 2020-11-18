@@ -3,6 +3,7 @@ require 'sinatra'
 require "sinatra/namespace"
 require "sinatra/streaming"
 
+require_relative "sinatra_ssl"
 require_relative 'classes'
 require_relative 'utils'
 require_relative 'api_methods'
@@ -16,6 +17,8 @@ PROVIDERS      = "/providers?detail=1".freeze
 FOLDERS        = "/folders".freeze
 NAMESPACES     = "/namespaces".freeze
 TOPOLOGY       = "/tree/host".freeze
+
+K8S_SECRET     = "/var/run/secrets/kubernetes.io/serviceaccount".freeze
 
 $debug         = true
 $stdout.sync   = true
@@ -94,8 +97,19 @@ end
 
 # ------------- Main ---------------------
 
+k8s_ns    = File.open("#{K8S_SECRET}/namespace").read
+BASE_URI  = "https://inventory.#{k8s_ns}.svc.cluster.local:8443".freeze
+
 set :bind, '0.0.0.0'
-set :port, 8080
+
+if ENV['API_TLS_CERTIFICATE'].nil? or ENV['API_TLS_KEY'].nil?
+  set :port, 8080
+else
+  set :ssl_enabled, true
+  set :ssl_certificate, ENV['API_TLS_CERTIFICATE']
+  set :ssl_key, ENV['API_TLS_KEY']
+  set :port, 8443
+end
 
 namespace '/api/v1' do
   get '/extract' do
