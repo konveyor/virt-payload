@@ -1,9 +1,12 @@
 FROM registry.access.redhat.com/ubi8/ruby-26
+RUN gem install \
+        memory_profiler \
+        package \
+        rest-client \
+        sinatra \
+        sinatra-namespace \
+        tempfile \
+        --source 'https://rubygems.org/' \
+        --no-document
 ADD payload_writer .
-RUN gem install tempfile --source 'https://rubygems.org/'
-RUN gem install rest-client --source 'https://rubygems.org/'
-RUN gem install sinatra --source 'https://rubygems.org/'
-RUN gem install sinatra-namespace --source 'https://rubygems.org/'
-RUN gem install package --source 'https://rubygems.org/'
-RUN gem install memory_profiler --source 'https://rubygems.org/'
 CMD ruby payload_writer.rb
