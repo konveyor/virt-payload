@@ -1,0 +1,26 @@
+= Package - The Package package package package!
+
+= Synopsis
+
+    pkg new foo-bar-rb from:~/pkg/rubygem
+
+= Description
+
+This is a general purpose tool for creating new packages.
+
+In this context, a package is a directory of text files that serve some
+purpose. This may be a Ruby gem, a CPAN module, a Python package, or even a
+non programming related set of text files that are needed for some purpose.
+
+If you are the type of person who is constantly packaging packages, then
+this Package package is the package for you.
+
+Package is used via a command line tool called +pkg+.
+
+= How To Use +pkg+
+
+… Coming Soon …
+
+= Copyright
+
+Copyright (c) 2013 Ingy döt Net. See LICENSE for further details.

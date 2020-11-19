@@ -7,3 +7,15 @@ Call with a list of provider names to include in the payload file, for example:
 
 http://address_or_service:8080/api/v1/extract?providers=this_namespace/test1,that_namespace/test2
 
+
+## Hacking
+
+To simplify the build in disconnected environments, we vendor the dependencies with bundler.
+So, if you need new gems, you need to update the vendor folder:
+
+```
+$ cd payload_writer
+$ bundle package
+```
+
+Then, in your commit, don't forget to add the vendor folder.
