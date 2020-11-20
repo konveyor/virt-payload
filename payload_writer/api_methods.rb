@@ -4,12 +4,10 @@ require 'json'
 
 def call_api(base_uri, path)
   starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  puts "RestClient using CA cert: #{K8S_SECRET}/service-ca.crt" if $debug
   rest_return = RestClient::Request.execute(method: :get,
                                             url: base_uri + path,
                                             :headers => {:accept => :json},
                                             ssl_ca_file: "#{K8S_SECRET}/service-ca.crt")
-                                            # verify_ssl: false)
   ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   elapsed = ending - starting
   puts "API call took #{elapsed} seconds" if $debug

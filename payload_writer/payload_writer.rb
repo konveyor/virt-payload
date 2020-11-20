@@ -12,7 +12,6 @@ require_relative 'utils'
 require_relative 'api_methods'
 require_relative 'create_methods'
 
-# BASE_URI       = "http://inventory".freeze
 VMS            = "/vms?detail=1".freeze
 HOSTS          = "/hosts?detail=1".freeze
 CLUSTERS       = "/clusters?detail=1".freeze
