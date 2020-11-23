@@ -12,7 +12,6 @@ require_relative 'utils'
 require_relative 'api_methods'
 require_relative 'create_methods'
 
-TEST_URI       = "https://inventory-openshift-migration.apps.cluster-pmcgow.v2v.bos.redhat.com".freeze
 VMS            = "/vms?detail=1".freeze
 HOSTS          = "/hosts?detail=1".freeze
 CLUSTERS       = "/clusters?detail=1".freeze
@@ -54,11 +53,11 @@ end
 # ----
 
 def extract(provider_list)
-  puts "Requested providers: #{provider_list.inspect}"
+  puts "Requested providers: #{provider_list.inspect}" if $debug
   all_vcenters = []
   get_namespaces(BASE_URI, NAMESPACES).each do |namespace|
     get_vsphere_providers(BASE_URI + "/namespaces", namespace, PROVIDERS).each do |vcenter|
-      puts "Considering: #{namespace}/#{vcenter['name']}"
+      puts "Considering: #{namespace}/#{vcenter['name']}" if $debug
       next unless provider_list.include?("#{namespace}/#{vcenter['name']}")
       begin
         all_vcenters << process_vc(vcenter)
@@ -100,13 +99,8 @@ end
 
 # ------------- Main ---------------------
 
-if FileTest.exist?(K8S_SECRET)
-  # Running in OpenShift
-  k8s_ns    = File.open("#{K8S_SECRET}/namespace").read
-  BASE_URI  = "https://inventory.#{k8s_ns}.svc.cluster.local:8443".freeze
-else
-  BASE_URI  = TEST_URI
-end
+k8s_ns    = File.open("#{K8S_SECRET}/namespace").read.chomp
+BASE_URI  = "https://inventory.#{k8s_ns}.svc.cluster.local:8443".freeze
 
 set :bind, '0.0.0.0'
 

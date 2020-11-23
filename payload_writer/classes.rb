@@ -53,14 +53,14 @@ class EmsCluster < MtvBaseObject
     }
   end
 end
-
+ 
 # ----
 
 class Vm < MtvBaseObject
   attr_accessor :hardware
   attr_accessor :operating_system
   attr_writer   :ballooned_memory
-  attr_writer   :cpu_affinity
+  attr_writer   :cpu_affinity             # VM has a CPU core affinity configuration rule
   attr_writer   :cpu_cores_per_socket
   attr_writer   :cpu_hot_add_enabled
   attr_writer   :cpu_hot_remove_enabled
@@ -68,23 +68,23 @@ class Vm < MtvBaseObject
   attr_writer   :ems_ref
   attr_writer   :firmware
   attr_writer   :folder_path
-  attr_writer   :has_cluster_dpm_config
-  attr_writer   :has_encrypted_disk
-  attr_writer   :has_opaque_network
-  attr_writer   :has_passthrough_device
-  attr_writer   :has_rdm_disk
-  attr_writer   :has_shared_disk
-  attr_writer   :has_sriov_nic
-  attr_writer   :has_usb_controller
-  attr_writer   :has_vm_affinity_config
-  attr_writer   :has_vm_drs_config
-  attr_writer   :has_vm_ft_config
-  attr_writer   :has_vm_ha_config
+  attr_writer   :has_cluster_dpm_config   # VM is running on a cluster that is configured with Distributed Power Management
+  attr_writer   :has_encrypted_disk       # VM has an encrypted disk
+  attr_writer   :has_opaque_network       # VM uses a software-defined network such as NSX-T
+  attr_writer   :has_passthrough_device   # VM has a SCSI or other pass-through device mapped from the host
+  attr_writer   :has_rdm_disk             # VM has a Raw Device Mapped disk
+  attr_writer   :has_shared_disk          # VM has a disk that's marked as shared
+  attr_writer   :has_sriov_nic            # VM has a NIC configured for SR-IOV
+  attr_writer   :has_usb_controller       # VM has a USB controller
+  attr_writer   :has_vm_affinity_config   # VM has a VM affinity/anti-affinity rule defined for it
+  attr_writer   :has_vm_drs_config        # VM is running on a cluster that's configured with Distributed Resource Sharing
+  attr_writer   :has_vm_ft_config         # VM is configured as one of a fault tolerant pair/unit
+  attr_writer   :has_vm_ha_config         # VM is running on a cluster that is configured for VM high availability
   attr_writer   :host
   attr_writer   :id
   attr_writer   :memory_hot_add_enabled
   attr_writer   :name
-  attr_writer   :numa_node_affinity
+  attr_writer   :numa_node_affinity       # VM has a NUMA node affinity configuration rule
   attr_writer   :ram_size_in_bytes
   attr_writer   :retired
   attr_writer   :used_disk_storage

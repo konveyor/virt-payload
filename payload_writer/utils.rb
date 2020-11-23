@@ -4,8 +4,8 @@ require 'pathname'
 require 'rubygems/package'
 
 def find_folder_path(api_folders, folder)
-  if folder["parent"]["Kind"] == "Folder"
-    parent = find_folder_path(api_folders, api_folders.detect {|f| f["id"] == folder["parent"]["ID"]})
+  if folder["parent"]["kind"] == "Folder"
+    parent = find_folder_path(api_folders, api_folders.detect {|f| f["id"] == folder["parent"]["id"]})
     parent == "vm" ? path = folder["name"] : path = "#{parent}/#{folder["name"]}"
   else
     path = folder["name"]
